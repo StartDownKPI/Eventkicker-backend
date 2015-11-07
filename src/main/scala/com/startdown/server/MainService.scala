@@ -15,18 +15,6 @@ trait MainService extends WebService {
 
   import com.startdown.models.UserJsonProtocol._
   import spray.httpx.SprayJsonSupport._
-
-  val exampleRoute =
-    path("api") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            marshal(User("infm", "Illia", "qwerty", 100))
-          }
-        }
-      }
-    }
-
   import PostgresUserActor._
 
   val postgresWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -46,7 +34,7 @@ trait MainService extends WebService {
           post {
             entity(as[User]) { user =>
               complete {
-                postgresCall(CreateUser(user))
+                postgresCall(Create(user))
               }
             }
           }
@@ -55,19 +43,19 @@ trait MainService extends WebService {
       path("user" / Segment) { username =>
         get {
           complete {
-            postgresCall(ReadUser(username))
+            postgresCall(Read(username))
           }
         } ~
           put {
             entity(as[User]) { user =>
               complete {
-                postgresCall(UpdateUser(user))
+                postgresCall(Update(user))
               }
             }
           } ~
           delete {
             complete {
-              postgresCall(DeleteUser(username))
+              postgresCall(Delete(username))
             }
           }
       }
