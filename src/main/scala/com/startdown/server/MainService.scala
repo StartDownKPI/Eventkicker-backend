@@ -4,8 +4,6 @@ import akka.actor.Props
 import akka.pattern.ask
 import com.startdown.actors.PostgresUserActor
 import com.startdown.models.User
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.marshal
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -13,9 +11,9 @@ import spray.httpx.marshalling.marshal
 
 trait MainService extends WebService {
 
+  import PostgresUserActor._
   import com.startdown.models.UserJsonProtocol._
   import spray.httpx.SprayJsonSupport._
-  import PostgresUserActor._
 
   val postgresWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
     "postgres-worker")
@@ -37,8 +35,25 @@ trait MainService extends WebService {
                 postgresCall(Create(user))
               }
             }
+          } ~
+          delete {
+            complete {
+              postgresCall(DeleteAll)
+            }
           }
-      }
+      } ~
+        path("table") {
+          get {
+            complete {
+              postgresCall(CreateTable)
+            }
+          } ~
+            delete {
+              complete {
+                postgresCall(DropTable)
+              }
+            }
+        }
     } ~
       path("user" / Segment) { username =>
         get {

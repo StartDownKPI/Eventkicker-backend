@@ -20,7 +20,7 @@ trait PostgresSupport {
       case v =>
         val table = v.find(_.name.name == "users")
         if (table.isEmpty)
-          db.run(UserDao.createTable)
+          UserDao.createTable
     }
   }
 }

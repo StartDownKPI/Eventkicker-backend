@@ -1,6 +1,7 @@
 package com.startdown.models
 
 import com.startdown.utils.PostgresSupport
+import org.mindrot.jbcrypt.BCrypt
 import slick.driver.PostgresDriver.api._
 import slick.lifted.{TableQuery, Tag}
 import spray.json.DefaultJsonProtocol
@@ -14,6 +15,9 @@ import scala.concurrent.duration.Duration
 
 case class User(username: String, name: String,
                 password: String, balance: Int)
+
+case class PartialUser(username: String, name: Option[String],
+                       password: Option[String], balance: Option[Int])
 
 object UserJsonProtocol extends DefaultJsonProtocol {
   implicit val userFormat = jsonFormat4(User)
@@ -36,9 +40,20 @@ object UserDao extends PostgresSupport {
     def * = (username, name, password, balance)
   }
 
+  def BCrypted(t: (String, String, String, Int)) =
+    (t._1, t._2, BCrypt.hashpw(t._3, BCrypt.gensalt()), t._4)
+
   val users = TableQuery[Users]
-  val createTable = users.schema.create
-  val dropTable = users.schema.drop
+
+  def createTable =
+    try {
+      Await.result(db.run(users.schema.create), Duration.Inf)
+    } finally db.close
+
+  def dropTable =
+    try {
+      Await.result(db.run(users.schema.drop), Duration.Inf)
+    } finally db.close
 
   def listAllUsers =
     try {
@@ -51,7 +66,7 @@ object UserDao extends PostgresSupport {
 
   def addUser(u: User) =
     try {
-      Await.result(db.run(users += User.unapply(u).get), Duration.Inf)
+      Await.result(db.run(users += BCrypted(User.unapply(u).get)), Duration.Inf)
     } finally db.close
 
   def findUser(username: String) =
@@ -80,5 +95,10 @@ object UserDao extends PostgresSupport {
             case _ => None
           }
         }), Duration.Inf)
+    } finally db.close
+
+  def deleteAll =
+    try {
+      Await.result(db.run(users.delete).map(identity), Duration.Inf)
     } finally db.close
 }

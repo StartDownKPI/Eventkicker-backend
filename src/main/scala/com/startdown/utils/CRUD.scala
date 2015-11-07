@@ -10,7 +10,6 @@ trait CRUD[T, PK] {
   case class Update(x: T)
   case class Delete(key: PK)
   case object DeleteAll
-  case object GetCount
   case object CreateTable
   case object DropTable
 }

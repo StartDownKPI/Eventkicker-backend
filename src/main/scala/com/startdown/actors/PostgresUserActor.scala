@@ -26,5 +26,11 @@ class PostgresUserActor extends Actor {
       sender ! UserDao.updateUser(u).toJson.compactPrint
     case Delete(username: String) =>
       sender ! UserDao.deleteUser(username).toJson.compactPrint
+    case DeleteAll =>
+      sender ! UserDao.deleteAll.toJson.compactPrint
+    case CreateTable =>
+      sender ! UserDao.createTable.toJson.compactPrint
+    case DropTable =>
+      sender ! UserDao.dropTable.toJson.compactPrint
   }
 }
