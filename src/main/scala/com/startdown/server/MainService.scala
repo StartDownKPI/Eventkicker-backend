@@ -37,15 +37,39 @@ trait MainService extends WebService {
 
   val userServiceRoutes = {
     pathPrefix("users") {
-      path("") {
+      pathEndOrSingleSlash {
         get {
-          respondWithMediaType(`application/json`) {
-            complete {
-              postgresCall(FetchAll)
+          complete {
+            postgresCall(FetchAll)
+          }
+        } ~
+          post {
+            entity(as[User]) { user =>
+              complete {
+                postgresCall(CreateUser(user))
+              }
             }
           }
-        }
       }
-    }
+    } ~
+      path("user" / Segment) { username =>
+        get {
+          complete {
+            postgresCall(ReadUser(username))
+          }
+        } ~
+          put {
+            entity(as[User]) { user =>
+              complete {
+                postgresCall(UpdateUser(user))
+              }
+            }
+          } ~
+          delete {
+            complete {
+              postgresCall(DeleteUser(username))
+            }
+          }
+      }
   }
 }

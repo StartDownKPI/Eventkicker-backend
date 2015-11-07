@@ -48,4 +48,37 @@ object UserDao extends PostgresSupport {
         }
       }), Duration.Inf)
     } finally db.close
+
+  def addUser(u: User) =
+    try {
+      Await.result(db.run(users += User.unapply(u).get), Duration.Inf)
+    } finally db.close
+
+  def findUser(username: String) =
+    try {
+      Await.result(db.run(users.filter(_.username === username).result
+        map {
+        case Seq(x, _*) => Some((User.apply _).tupled(x))
+        case _ => None
+      }), Duration.Inf)
+    } finally db.close
+
+  def updateUser(u: User) =
+    try {
+      val t = User.unapply(u).get
+      Await.result(db.run(users.filter(_.username === u.username).update(t)),
+        Duration.Inf)
+    } finally db.close
+
+  def deleteUser(username: String) =
+    try {
+      val filterQ = users.filter(_.username === username)
+      Await.result(
+        db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
+          res match {
+            case Seq(x, _*) => Some((User.apply _).tupled(x))
+            case _ => None
+          }
+        }), Duration.Inf)
+    } finally db.close
 }
