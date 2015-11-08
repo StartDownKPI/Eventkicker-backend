@@ -3,7 +3,7 @@ package com.startdown.models
 import com.startdown.utils.PostgresSupport
 import org.mindrot.jbcrypt.BCrypt
 import slick.driver.PostgresDriver.api._
-import slick.lifted.{TableQuery, Tag}
+import slick.lifted.{ProvenShape, TableQuery, Tag}
 import spray.json.DefaultJsonProtocol
 
 import scala.concurrent.Await
@@ -76,9 +76,17 @@ object UserDao extends PostgresSupport {
       }), Duration.Inf)
     } finally db.close
 
+  def getUpdatableColumns(us: Users) =
+    (us.name, us.password, us.balance)
+  def getUpdatableValues(u: User) =
+    (u.name, u.password.get, u.balance)
+
   def updateUser(u: User) =
     try {
-      Await.result(db.run(users.filter(_.username === u.username).update(u)),
+      val columns = for {
+        us <- users.filter(_.username === u.username)
+      } yield getUpdatableColumns(us)
+      Await.result(db.run(columns.update(getUpdatableValues(BCrypted(u)))),
         Duration.Inf)
     } finally db.close
 
