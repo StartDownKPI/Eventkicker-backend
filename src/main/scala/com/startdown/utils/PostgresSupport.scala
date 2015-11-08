@@ -8,12 +8,10 @@ import slick.jdbc.meta.MTable
   * infm created it with love on 11/7/15. Enjoy ;)
   */
 trait PostgresSupport {
-  // TODO: Replace with config
-
   protected implicit def executor =
     scala.concurrent.ExecutionContext.Implicits.global
 
-  def db = Database.forConfig("postgres")
+  def db = SinglePool.db
 
   def startPostgres = {
     db.run(MTable.getTables) map {
@@ -23,4 +21,8 @@ trait PostgresSupport {
           UserDao.createTable
     }
   }
+}
+
+object SinglePool {
+  lazy val db = Database.forConfig("postgres")
 }

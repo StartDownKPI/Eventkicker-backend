@@ -3,11 +3,8 @@ package com.startdown.models
 import com.startdown.utils.PostgresSupport
 import org.mindrot.jbcrypt.BCrypt
 import slick.driver.PostgresDriver.api._
-import slick.lifted.{ProvenShape, TableQuery, Tag}
+import slick.lifted.{TableQuery, Tag}
 import spray.json.DefaultJsonProtocol
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -43,67 +40,52 @@ object UserDao extends PostgresSupport {
 
   def BCrypted(u: User) =
     u.copy(password = Some(BCrypt.hashpw(u.password.getOrElse("qwerty"),
-                                         BCrypt.gensalt())))
+      BCrypt.gensalt())))
 
   val users = TableQuery[Users]
 
   def createTable =
-    try {
-      Await.result(db.run(users.schema.create), Duration.Inf)
-    } finally db.close
+    db.run(users.schema.create)
 
   def dropTable =
-    try {
-      Await.result(db.run(users.schema.drop), Duration.Inf)
-    } finally db.close
+    db.run(users.schema.drop)
 
   def listAllUsers =
-    try {
-      Await.result(db.run(users.result), Duration.Inf)
-    } finally db.close
+    db.run(users.result)
 
   def addUser(u: User) =
-    try {
-      Await.result(db.run(users += BCrypted(u)), Duration.Inf)
-    } finally db.close
+    db.run(users += BCrypted(u))
 
-  def findUser(username: String) =
-    try {
-      Await.result(db.run(users.filter(_.username === username).result
-        map {
-        case Seq(x, _*) => Some(x)
-        case _ => None
-      }), Duration.Inf)
-    } finally db.close
+  def findUser(username: String) = {
+    db.run(users.filter(_.username === username).result
+      map {
+      case Seq(x, _*) => Some(x)
+      case _ => None
+    })
+  }
 
   def getUpdatableColumns(us: Users) =
     (us.name, us.password, us.balance)
   def getUpdatableValues(u: User) =
     (u.name, u.password.get, u.balance)
 
-  def updateUser(u: User) =
-    try {
-      val columns = for {
-        us <- users.filter(_.username === u.username)
-      } yield getUpdatableColumns(us)
-      Await.result(db.run(columns.update(getUpdatableValues(BCrypted(u)))),
-        Duration.Inf)
-    } finally db.close
+  def updateUser(u: User) = {
+    val columns = for {
+      us <- users.filter(_.username === u.username)
+    } yield getUpdatableColumns(us)
+    db.run(columns.update(getUpdatableValues(BCrypted(u))))
+  }
 
-  def deleteUser(username: String) =
-    try {
-      val filterQ = users.filter(_.username === username)
-      Await.result(
-        db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
-          res match {
-            case Seq(x, _*) => Some(x)
-            case _ => None
-          }
-        }), Duration.Inf)
-    } finally db.close
+  def deleteUser(username: String) = {
+    val filterQ = users.filter(_.username === username)
+    db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
+      res match {
+        case Seq(x, _*) => Some(x)
+        case _ => None
+      }
+    })
+  }
 
   def deleteAll =
-    try {
-      Await.result(db.run(users.delete).map(identity), Duration.Inf)
-    } finally db.close
+    db.run(users.delete)
 }

@@ -2,7 +2,7 @@ organization  := "com.example"
 
 version       := "0.1"
 
-scalaVersion  := "2.11.6"
+scalaVersion  := "2.11.7"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -19,7 +19,6 @@ libraryDependencies ++= {
     "com.typesafe.slick"  %%  "slick"         % "3.1.0",
     "com.typesafe.slick"  %%  "slick-hikaricp"% "3.1.0",
     "com.github.tminglei" %%  "slick-pg"      % "0.10.1",
-    "com.zaxxer"          %   "HikariCP"      % "2.4.1",
     "org.mindrot"         %   "jbcrypt"       % "0.3m",
     "org.postgresql"      %   "postgresql"    % "9.3-1102-jdbc41",
     "org.slf4j"           %   "slf4j-nop"     % "1.6.4",
