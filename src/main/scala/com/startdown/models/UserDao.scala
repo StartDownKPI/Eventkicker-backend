@@ -13,14 +13,14 @@ import scala.concurrent.duration.Duration
   * infm created it with love on 11/7/15. Enjoy ;)
   */
 
-case class User(username: String, name: String,
-                password: String, balance: Int)
-
-case class PartialUser(username: String, name: Option[String],
-                       password: Option[String], balance: Option[Int])
+case class User(id: Option[Long],
+                username: String,
+                name: Option[String],
+                password: Option[String],
+                balance: Option[Int])
 
 object UserJsonProtocol extends DefaultJsonProtocol {
-  implicit val userFormat = jsonFormat4(User)
+  implicit val userFormat = jsonFormat5(User)
 }
 
 /**
@@ -30,18 +30,20 @@ I am super coder and know this
   */
 object UserDao extends PostgresSupport {
 
-  class Users(tag: Tag) extends Table[(String, String, String, Int)](tag,
-    "users") {
-    def username = column[String]("USERNAME", O.PrimaryKey)
-    def name = column[String]("NAME")
-    def password = column[String]("PASSWD")
-    def balance = column[Int]("BALANCE")
+  class Users(tag: Tag) extends Table[User](tag, "users") {
+    def id = column[Long]("id", O.AutoInc)
+    def username = column[String]("username", O.PrimaryKey)
+    def name = column[Option[String]]("name")
+    def password = column[String]("passwd")
+    def balance = column[Option[Int]]("balance")
 
-    def * = (username, name, password, balance)
+    def * = (id.?, username, name, password.?, balance) <>
+      (User.tupled, User.unapply)
   }
 
-  def BCrypted(t: (String, String, String, Int)) =
-    (t._1, t._2, BCrypt.hashpw(t._3, BCrypt.gensalt()), t._4)
+  def BCrypted(u: User) =
+    u.copy(password = Some(BCrypt.hashpw(u.password.getOrElse("qwerty"),
+                                         BCrypt.gensalt())))
 
   val users = TableQuery[Users]
 
@@ -57,31 +59,26 @@ object UserDao extends PostgresSupport {
 
   def listAllUsers =
     try {
-      Await.result(db.run(users.result map { case seq =>
-        seq map { case t =>
-          (User.apply _).tupled(t)
-        }
-      }), Duration.Inf)
+      Await.result(db.run(users.result), Duration.Inf)
     } finally db.close
 
   def addUser(u: User) =
     try {
-      Await.result(db.run(users += BCrypted(User.unapply(u).get)), Duration.Inf)
+      Await.result(db.run(users += BCrypted(u)), Duration.Inf)
     } finally db.close
 
   def findUser(username: String) =
     try {
       Await.result(db.run(users.filter(_.username === username).result
         map {
-        case Seq(x, _*) => Some((User.apply _).tupled(x))
+        case Seq(x, _*) => Some(x)
         case _ => None
       }), Duration.Inf)
     } finally db.close
 
   def updateUser(u: User) =
     try {
-      val t = User.unapply(u).get
-      Await.result(db.run(users.filter(_.username === u.username).update(t)),
+      Await.result(db.run(users.filter(_.username === u.username).update(u)),
         Duration.Inf)
     } finally db.close
 
@@ -91,7 +88,7 @@ object UserDao extends PostgresSupport {
       Await.result(
         db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
           res match {
-            case Seq(x, _*) => Some((User.apply _).tupled(x))
+            case Seq(x, _*) => Some(x)
             case _ => None
           }
         }), Duration.Inf)

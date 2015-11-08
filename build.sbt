@@ -18,6 +18,7 @@ libraryDependencies ++= {
     "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
     "com.typesafe.slick"  %%  "slick"         % "3.1.0",
     "com.typesafe.slick"  %%  "slick-hikaricp"% "3.1.0",
+    "com.github.tminglei" %%  "slick-pg"      % "0.10.1",
     "com.zaxxer"          %   "HikariCP"      % "2.4.1",
     "org.mindrot"         %   "jbcrypt"       % "0.3m",
     "org.postgresql"      %   "postgresql"    % "9.3-1102-jdbc41",
