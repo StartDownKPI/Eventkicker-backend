@@ -1,10 +1,10 @@
 package com.startdown.models
 
 import com.startdown.utils.PostgresSupport
+import com.startdown.utils.CustomPostgresDriver
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-import slick.driver.PostgresDriver.api._
-import slick.lifted.{TableQuery, Tag}
+import slick.lifted.{Tag}
 import spray.json._
 import com.github.tototoshi.slick.PostgresJodaSupport._
 
@@ -18,9 +18,9 @@ case class Event(id: Option[Long],
                  timeScheduled: Option[DateTime],
                  description: Option[String],
                  pictureUrl: Option[String],
-                 userCreatedId: Option[Long]/*,
+                 userCreatedId: Option[Long],
                  participantIds: Option[List[Long]],
-                 itemsNeeded: Option[List[String]]*/)
+                 itemsNeeded: Option[List[String]])
 
 object JodaTimeJsonProtocol extends DefaultJsonProtocol {
   val formatter = ISODateTimeFormat.basicDateTimeNoMillis
@@ -47,18 +47,14 @@ object JodaTimeJsonProtocol extends DefaultJsonProtocol {
 object EventJsonProtocol extends DefaultJsonProtocol {
   import JodaTimeJsonProtocol._
   implicit val eventFormat = jsonFormat(Event, "id", "name", "timeCreated",
-    "timeScheduled", "description", "pictureUrl", "userCreatedId")
-/*
-  implicit object EventJsonFormat extends RootJsonFormat[Event] {
-    def write(c: Event) = {
+    "timeScheduled", "description", "pictureUrl", "userCreatedId",
+  "participantIds", "itemsNeeded")
 
-    }
-  }
-*/
 }
 
 object EventDao extends PostgresSupport {
 
+  import CustomPostgresDriver.api._
   class Events(tag: Tag) extends Table[Event](tag, "events") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
     def name = column[String]("name")
@@ -67,15 +63,16 @@ object EventDao extends PostgresSupport {
     def description = column[Option[String]]("description")
     def pictureUrl = column[Option[String]]("pictureUrl")
     def userCreatedId = column[Long]("userCreatedId")
-    // def participantIds = column[Option[List[Long]]]("participantIds")
-    // def itemsNeeded = column[Option[List[String]]]("itemsNeeded")
+    def participantIds = column[Option[List[Long]]]("participantIds")
+    def itemsNeeded = column[Option[List[String]]]("itemsNeeded")
 
     def * = (id.?, name.?, timeCreated.?, timeScheduled.?, description,
-      pictureUrl, userCreatedId.?/*, participantIds, itemsNeeded*/) <>
+      pictureUrl, userCreatedId.?, participantIds, itemsNeeded) <>
       (Event.tupled, Event.unapply)
 
     def userCreated = foreignKey("userCreatedFk", userCreatedId,
-      UserDao.users)(_.id)
+        UserDao.users)(_.id, onUpdate=ForeignKeyAction.Restrict,
+                       onDelete=ForeignKeyAction.Cascade)
   }
 
   val events = TableQuery[Events]

@@ -28,14 +28,16 @@ I am super coder and know this
 object UserDao extends PostgresSupport {
 
   class Users(tag: Tag) extends Table[User](tag, "users") {
-    def id = column[Long]("id", O.AutoInc)
-    def username = column[String]("username", O.PrimaryKey)
+    def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
+    def username = column[String]("username")
     def name = column[Option[String]]("name")
     def password = column[String]("passwd")
     def balance = column[Option[Int]]("balance")
 
     def * = (id.?, username, name, password.?, balance) <>
       (User.tupled, User.unapply)
+
+    def idx = index("idx_username", username, unique = true)
   }
 
   def BCrypted(u: User) =
