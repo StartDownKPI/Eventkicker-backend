@@ -2,8 +2,8 @@ package com.startdown.server
 
 import akka.actor.Props
 import akka.pattern.ask
-import com.startdown.actors.PostgresUserActor
-import com.startdown.models.User
+import com.startdown.actors.{PostgresEventActor, PostgresUserActor}
+import com.startdown.models.{Event, User}
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -11,46 +11,53 @@ import com.startdown.models.User
 
 trait MainService extends WebService {
 
-  import PostgresUserActor._
   import com.startdown.models.UserJsonProtocol._
+  import com.startdown.models.EventJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
-  val postgresWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
-    "postgres-worker")
+  val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
+    "postgres-user-worker")
 
-  def postgresCall(message: Any) =
-    (postgresWorker ? message).mapTo[String].map(identity)
+  def postgresUserCall(message: Any) =
+    (postgresUserWorker ? message).mapTo[String].map(identity)
+
+  val postgresEventWorker = actorRefFactory.actorOf(Props[PostgresEventActor],
+    "postgres-event-worker")
+
+  def postgresEventCall(message: Any) =
+    (postgresEventWorker ? message).mapTo[String].map(identity)
 
   val userServiceRoutes = {
+    import PostgresUserActor._
     pathPrefix("users") {
       pathEndOrSingleSlash {
         get {
           complete {
-            postgresCall(FetchAll)
+            postgresUserCall(FetchAll)
           }
         } ~
           post {
             entity(as[User]) { user =>
               complete {
-                postgresCall(Create(user))
+                postgresUserCall(Create(user))
               }
             }
           } ~
           delete {
             complete {
-              postgresCall(DeleteAll)
+              postgresUserCall(DeleteAll)
             }
           }
       } ~
         path("table") {
           get {
             complete {
-              postgresCall(CreateTable)
+              postgresUserCall(CreateTable)
             }
           } ~
             delete {
               complete {
-                postgresCall(DropTable)
+                postgresUserCall(DropTable)
               }
             }
         }
@@ -58,19 +65,76 @@ trait MainService extends WebService {
       path("user" / Segment) { username =>
         get {
           complete {
-            postgresCall(Read(username))
+            postgresUserCall(Read(username))
           }
         } ~
           put {
             entity(as[User]) { user =>
               complete {
-                postgresCall(Update(user))
+                postgresUserCall(Update(user))
               }
             }
           } ~
           delete {
             complete {
-              postgresCall(Delete(username))
+              postgresUserCall(Delete(username))
+            }
+          }
+      }
+  }
+
+
+  val eventServiceRoutes = {
+    import PostgresEventActor._
+    pathPrefix("events") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            postgresEventCall(FetchAll)
+          }
+        } ~
+          post {
+            entity(as[Event]) { event =>
+              complete {
+                postgresEventCall(Create(event))
+              }
+            }
+          } ~
+          delete {
+            complete {
+              postgresEventCall(DeleteAll)
+            }
+          }
+      } ~
+        path("table") {
+          get {
+            complete {
+              postgresEventCall(CreateTable)
+            }
+          } ~
+            delete {
+              complete {
+                postgresEventCall(DropTable)
+              }
+            }
+        }
+    } ~
+      path("event" / LongNumber) { eventId =>
+        get {
+          complete {
+            postgresEventCall(Read(eventId))
+          }
+        } ~
+          put {
+            entity(as[Event]) { event =>
+              complete {
+                postgresEventCall(Update(event))
+              }
+            }
+          } ~
+          delete {
+            complete {
+              postgresEventCall(Delete(eventId))
             }
           }
       }
