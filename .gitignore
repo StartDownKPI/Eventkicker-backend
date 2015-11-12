@@ -8,6 +8,8 @@ test-output/
 *.iml
 .classpath_nb
 
+bash_setup/
+
 # joe made this: https://goel.io/joe
 
 #####=== Scala ===#####
