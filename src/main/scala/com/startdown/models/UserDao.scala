@@ -13,18 +13,12 @@ import spray.json.DefaultJsonProtocol
 case class User(id: Option[Long],
                 username: String,
                 name: Option[String],
-                password: Option[String],
-                balance: Option[Int])
+                password: Option[String])
 
 object UserJsonProtocol extends DefaultJsonProtocol {
-  implicit val userFormat = jsonFormat5(User)
+  implicit val userFormat = jsonFormat4(User)
 }
 
-/**
-I am super coder and know this
-      John Stead Fedorovich
-    Ich bin super koder und weiss noch
-  */
 object UserDao extends PostgresSupport {
 
   class Users(tag: Tag) extends Table[User](tag, "users") {
@@ -32,9 +26,8 @@ object UserDao extends PostgresSupport {
     def username = column[String]("username")
     def name = column[Option[String]]("name")
     def password = column[String]("passwd")
-    def balance = column[Option[Int]]("balance")
 
-    def * = (id.?, username, name, password.?, balance) <>
+    def * = (id.?, username, name, password.?) <>
       (User.tupled, User.unapply)
 
     def idx = index("idx_username", username, unique = true)
@@ -67,9 +60,9 @@ object UserDao extends PostgresSupport {
   }
 
   def getUpdatableColumns(us: Users) =
-    (us.name, us.password, us.balance)
+    (us.name, us.password)
   def getUpdatableValues(u: User) =
-    (u.name, u.password.get, u.balance)
+    (u.name, u.password.get)
 
   def updateUser(u: User) = {
     val columns = for {
