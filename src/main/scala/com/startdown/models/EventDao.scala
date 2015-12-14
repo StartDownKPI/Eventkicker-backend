@@ -18,9 +18,7 @@ case class Event(id: Option[Long],
                  timeScheduled: Option[DateTime],
                  description: Option[String],
                  pictureUrl: Option[String],
-                 userCreatedId: Option[Long],
-                 participantIds: Option[List[Long]],
-                 itemsNeeded: Option[List[String]])
+                 authorId: Option[Long])
 
 object JodaTimeJsonProtocol extends DefaultJsonProtocol {
   val formatter = ISODateTimeFormat.basicDateTimeNoMillis
@@ -47,8 +45,7 @@ object JodaTimeJsonProtocol extends DefaultJsonProtocol {
 object EventJsonProtocol extends DefaultJsonProtocol {
   import JodaTimeJsonProtocol._
   implicit val eventFormat = jsonFormat(Event, "id", "name", "timeCreated",
-    "timeScheduled", "description", "pictureUrl", "userCreatedId",
-  "participantIds", "itemsNeeded")
+    "timeScheduled", "description", "pictureUrl", "authorId")
 
 }
 
@@ -62,15 +59,13 @@ object EventDao extends PostgresSupport {
     def timeScheduled = column[DateTime]("timeScheduled")
     def description = column[Option[String]]("description")
     def pictureUrl = column[Option[String]]("pictureUrl")
-    def userCreatedId = column[Long]("userCreatedId")
-    def participantIds = column[Option[List[Long]]]("participantIds")
-    def itemsNeeded = column[Option[List[String]]]("itemsNeeded")
+    def authorId = column[Long]("authorId")
 
     def * = (id.?, name.?, timeCreated.?, timeScheduled.?, description,
-      pictureUrl, userCreatedId.?, participantIds, itemsNeeded) <>
+      pictureUrl, authorId.?) <>
       (Event.tupled, Event.unapply)
 
-    def userCreated = foreignKey("userCreatedFk", userCreatedId,
+    def userCreated = foreignKey("authorFk", authorId,
         UserDao.users)(_.id, onUpdate=ForeignKeyAction.Restrict,
                        onDelete=ForeignKeyAction.Cascade)
   }
@@ -99,11 +94,11 @@ object EventDao extends PostgresSupport {
 
   def getUpdatableColumns(es: Events) =
     (es.name, es.timeCreated, es.timeScheduled, es.description,
-      es.pictureUrl, es.userCreatedId)
+      es.pictureUrl, es.authorId)
   def getUpdatableValues(e: Event) =
     (e.name.orNull, e.timeCreated.orNull,
       e.timeScheduled.orNull, e.description,
-      e.pictureUrl, e.userCreatedId.get)
+      e.pictureUrl, e.authorId.get)
 
   def updateEvent(e: Event) = {
     val ensure = e.id.get
