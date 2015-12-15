@@ -1,12 +1,10 @@
 package com.startdown.models
 
-import com.startdown.utils.PostgresSupport
-import com.startdown.utils.CustomPostgresDriver
+import com.github.tototoshi.slick.PostgresJodaSupport._
+import com.startdown.utils.{CustomPostgresDriver, PostgresSupport}
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-import slick.lifted.{Tag}
 import spray.json._
-import com.github.tototoshi.slick.PostgresJodaSupport._
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -65,9 +63,9 @@ object EventDao extends PostgresSupport {
       pictureUrl, authorId.?) <>
       (Event.tupled, Event.unapply)
 
-    def userCreated = foreignKey("authorFk", authorId,
-        UserDao.users)(_.id, onUpdate=ForeignKeyAction.Restrict,
-                       onDelete=ForeignKeyAction.Cascade)
+    def author = foreignKey("authorFk", authorId,
+      UserDao.users)(_.id, onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Cascade)
   }
 
   val events = TableQuery[Events]
