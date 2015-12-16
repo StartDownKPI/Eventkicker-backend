@@ -25,8 +25,7 @@ libraryDependencies ++= {
     "org.slf4j"           %   "slf4j-nop"     % "1.6.4",
     "org.specs2"          %%  "specs2-core"   % "2.3.11" % "test",
     "joda-time"           %   "joda-time"     % "2.7",
-    "org.joda"            %   "joda-convert"  % "1.7",
-    "commons-daemon"      %   "commons-daemon"% "1.0.15"
+    "org.joda"            %   "joda-convert"  % "1.7"
   )
 }
 
