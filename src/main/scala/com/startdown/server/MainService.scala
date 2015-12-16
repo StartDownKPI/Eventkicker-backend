@@ -2,8 +2,7 @@ package com.startdown.server
 
 import akka.actor.Props
 import akka.pattern.ask
-import com.startdown.actors.{PostgresCommentActor, PostgresItemActor,
-PostgresEventActor, PostgresUserActor, PostgresLikeActor}
+import com.startdown.actors._
 import com.startdown.models._
 
 /**
@@ -17,6 +16,7 @@ trait MainService extends WebService {
   import com.startdown.models.ItemJsonProtocol._
   import com.startdown.models.CommentJsonProtocol._
   import com.startdown.models.LikeJsonProtocol._
+  import com.startdown.models.HelpRequestJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -37,8 +37,8 @@ trait MainService extends WebService {
   def postgresItemCall(message: Any) =
     (postgresItemWorker ? message).mapTo[String].map(identity)
 
-  val postgresCommentWorker = actorRefFactory.actorOf(Props[PostgresCommentActor],
-    "postgres-comment-worker")
+  val postgresCommentWorker = actorRefFactory.actorOf(
+    Props[PostgresCommentActor], "postgres-comment-worker")
 
   def postgresCommentCall(message: Any) =
     (postgresCommentWorker ? message).mapTo[String].map(identity)
@@ -49,6 +49,12 @@ trait MainService extends WebService {
   def postgresLikeCall(message: Any) =
     (postgresLikeWorker ? message).mapTo[String].map(identity)
 
+  val postgresHelpRequestWorker = actorRefFactory.actorOf(
+    Props[PostgresHelpRequestActor], "postgres-help-request-worker")
+
+  def postgresHelpRequestCall(message: Any) =
+    (postgresHelpRequestWorker ? message).mapTo[String].map(identity)
+
   val userServiceRoutes = {
     import PostgresUserActor._
     pathPrefix("users") {
@@ -58,51 +64,51 @@ trait MainService extends WebService {
             postgresUserCall(FetchAll)
           }
         } ~
-          post {
-            entity(as[User]) { user =>
-              complete {
-                postgresUserCall(Create(user))
+            post {
+              entity(as[User]) { user =>
+                complete {
+                  postgresUserCall(Create(user))
+                }
               }
-            }
-          } ~
-          delete {
-            complete {
-              postgresUserCall(DeleteAll)
-            }
-          }
-      } ~
-        path("table") {
-          get {
-            complete {
-              postgresUserCall(CreateTable)
-            }
-          } ~
+            } ~
             delete {
               complete {
-                postgresUserCall(DropTable)
+                postgresUserCall(DeleteAll)
               }
             }
-        }
-    } ~
-      path("user" / Segment) { username =>
-        get {
-          complete {
-            postgresUserCall(Read(username))
-          }
-        } ~
-          put {
-            entity(as[User]) { user =>
+      } ~
+          path("table") {
+            get {
               complete {
-                postgresUserCall(Update(user))
+                postgresUserCall(CreateTable)
               }
+            } ~
+                delete {
+                  complete {
+                    postgresUserCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("user" / Segment) { username =>
+          get {
+            complete {
+              postgresUserCall(Read(username))
             }
           } ~
-          delete {
-            complete {
-              postgresUserCall(Delete(username))
-            }
-          }
-      }
+              put {
+                entity(as[User]) { user =>
+                  complete {
+                    postgresUserCall(Update(user))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresUserCall(Delete(username))
+                }
+              }
+        }
   }
 
 
@@ -115,51 +121,51 @@ trait MainService extends WebService {
             postgresEventCall(FetchAll)
           }
         } ~
-          post {
-            entity(as[Event]) { event =>
-              complete {
-                postgresEventCall(Create(event))
+            post {
+              entity(as[Event]) { event =>
+                complete {
+                  postgresEventCall(Create(event))
+                }
               }
-            }
-          } ~
-          delete {
-            complete {
-              postgresEventCall(DeleteAll)
-            }
-          }
-      } ~
-        path("table") {
-          get {
-            complete {
-              postgresEventCall(CreateTable)
-            }
-          } ~
+            } ~
             delete {
               complete {
-                postgresEventCall(DropTable)
+                postgresEventCall(DeleteAll)
               }
             }
-        }
-    } ~
-      path("event" / LongNumber) { eventId =>
-        get {
-          complete {
-            postgresEventCall(Read(eventId))
-          }
-        } ~
-          put {
-            entity(as[Event]) { event =>
+      } ~
+          path("table") {
+            get {
               complete {
-                postgresEventCall(Update(event))
+                postgresEventCall(CreateTable)
               }
+            } ~
+                delete {
+                  complete {
+                    postgresEventCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("event" / LongNumber) { eventId =>
+          get {
+            complete {
+              postgresEventCall(Read(eventId))
             }
           } ~
-          delete {
-            complete {
-              postgresEventCall(Delete(eventId))
-            }
-          }
-      }
+              put {
+                entity(as[Event]) { event =>
+                  complete {
+                    postgresEventCall(Update(event))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresEventCall(Delete(eventId))
+                }
+              }
+        }
   }
 
   val itemServiceRoutes = {
@@ -324,6 +330,62 @@ trait MainService extends WebService {
               delete {
                 complete {
                   postgresLikeCall(Delete(likeId))
+                }
+              }
+        }
+  }
+
+  val helpRequestServiceRoutes = {
+    import PostgresHelpRequestActor._
+    pathPrefix("help-requests") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            postgresHelpRequestCall(FetchAll)
+          }
+        } ~
+            post {
+              entity(as[HelpRequest]) { helpRequest =>
+                complete {
+                  postgresHelpRequestCall(Create(helpRequest))
+                }
+              }
+            } ~
+            delete {
+              complete {
+                postgresHelpRequestCall(DeleteAll)
+              }
+            }
+      } ~
+          path("table") {
+            get {
+              complete {
+                postgresHelpRequestCall(CreateTable)
+              }
+            } ~
+                delete {
+                  complete {
+                    postgresHelpRequestCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("help-request" / LongNumber) { helpRequestId =>
+          get {
+            complete {
+              postgresHelpRequestCall(Read(helpRequestId))
+            }
+          } ~
+              put {
+                entity(as[HelpRequest]) { helpRequest =>
+                  complete {
+                    postgresHelpRequestCall(Update(helpRequest))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresHelpRequestCall(Delete(helpRequestId))
                 }
               }
         }
