@@ -14,7 +14,8 @@ class MainActor extends Actor with MainService {
       userServiceRoutes ~
           eventServiceRoutes ~
           itemServiceRoutes ~
-          commentServiceRoutes
+          commentServiceRoutes ~
+          likeServiceRoutes
     }
   )
 }

@@ -2,8 +2,9 @@ package com.startdown.server
 
 import akka.actor.Props
 import akka.pattern.ask
-import com.startdown.actors.{PostgresCommentActor, PostgresItemActor, PostgresEventActor, PostgresUserActor}
-import com.startdown.models.{Comment, Item, Event, User}
+import com.startdown.actors.{PostgresCommentActor, PostgresItemActor,
+PostgresEventActor, PostgresUserActor, PostgresLikeActor}
+import com.startdown.models._
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -15,6 +16,7 @@ trait MainService extends WebService {
   import com.startdown.models.EventJsonProtocol._
   import com.startdown.models.ItemJsonProtocol._
   import com.startdown.models.CommentJsonProtocol._
+  import com.startdown.models.LikeJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -40,6 +42,12 @@ trait MainService extends WebService {
 
   def postgresCommentCall(message: Any) =
     (postgresCommentWorker ? message).mapTo[String].map(identity)
+
+  val postgresLikeWorker = actorRefFactory.actorOf(Props[PostgresLikeActor],
+    "postgres-like-worker")
+
+  def postgresLikeCall(message: Any) =
+    (postgresLikeWorker ? message).mapTo[String].map(identity)
 
   val userServiceRoutes = {
     import PostgresUserActor._
@@ -260,6 +268,62 @@ trait MainService extends WebService {
               delete {
                 complete {
                   postgresCommentCall(Delete(commentId))
+                }
+              }
+        }
+  }
+
+  val likeServiceRoutes = {
+    import PostgresLikeActor._
+    pathPrefix("likes") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            postgresLikeCall(FetchAll)
+          }
+        } ~
+            post {
+              entity(as[Like]) { like =>
+                complete {
+                  postgresLikeCall(Create(like))
+                }
+              }
+            } ~
+            delete {
+              complete {
+                postgresLikeCall(DeleteAll)
+              }
+            }
+      } ~
+          path("table") {
+            get {
+              complete {
+                postgresLikeCall(CreateTable)
+              }
+            } ~
+                delete {
+                  complete {
+                    postgresLikeCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("like" / LongNumber) { likeId =>
+          get {
+            complete {
+              postgresLikeCall(Read(likeId))
+            }
+          } ~
+              put {
+                entity(as[Like]) { like =>
+                  complete {
+                    postgresLikeCall(Update(like))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresLikeCall(Delete(likeId))
                 }
               }
         }
