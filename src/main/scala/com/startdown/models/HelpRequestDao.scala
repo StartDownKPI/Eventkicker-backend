@@ -53,7 +53,12 @@ object HelpRequestDao extends PostgresSupport {
     db.run(helpRequests.result)
 
   def addHelpRequest(hr: HelpRequest) =
-    db.run(helpRequests += hr.copy(timeCreated = Some(DateTime.now())))
+    db.run(helpRequests += hr.copy(timeCreated = Some(DateTime.now())).copy(
+      isAccepted =
+          if (hr.isAccepted.nonEmpty)
+            hr.isAccepted
+          else
+            Some(false)))
 
   def findHelpRequest(id: Long) = {
     db.run(helpRequests.filter(_.id === id).result
