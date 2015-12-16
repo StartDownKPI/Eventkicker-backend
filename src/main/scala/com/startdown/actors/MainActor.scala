@@ -11,7 +11,10 @@ class MainActor extends Actor with MainService {
 
   def receive = runRoute(
     pathPrefix("api") {
-      userServiceRoutes ~ eventServiceRoutes ~ itemServiceRoutes
+      userServiceRoutes ~
+          eventServiceRoutes ~
+          itemServiceRoutes ~
+          commentServiceRoutes
     }
   )
 }

@@ -2,8 +2,8 @@ package com.startdown.server
 
 import akka.actor.Props
 import akka.pattern.ask
-import com.startdown.actors.{PostgresItemActor, PostgresEventActor, PostgresUserActor}
-import com.startdown.models.{Item, Event, User}
+import com.startdown.actors.{PostgresCommentActor, PostgresItemActor, PostgresEventActor, PostgresUserActor}
+import com.startdown.models.{Comment, Item, Event, User}
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -14,6 +14,7 @@ trait MainService extends WebService {
   import com.startdown.models.UserJsonProtocol._
   import com.startdown.models.EventJsonProtocol._
   import com.startdown.models.ItemJsonProtocol._
+  import com.startdown.models.CommentJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -33,6 +34,12 @@ trait MainService extends WebService {
 
   def postgresItemCall(message: Any) =
     (postgresItemWorker ? message).mapTo[String].map(identity)
+
+  val postgresCommentWorker = actorRefFactory.actorOf(Props[PostgresCommentActor],
+    "postgres-comment-worker")
+
+  def postgresCommentCall(message: Any) =
+    (postgresCommentWorker ? message).mapTo[String].map(identity)
 
   val userServiceRoutes = {
     import PostgresUserActor._
@@ -198,6 +205,61 @@ trait MainService extends WebService {
               delete {
                 complete {
                   postgresItemCall(Delete(itemId))
+                }
+              }
+        }
+  }
+  val commentServiceRoutes = {
+    import PostgresCommentActor._
+    pathPrefix("comments") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            postgresCommentCall(FetchAll)
+          }
+        } ~
+            post {
+              entity(as[Comment]) { comment =>
+                complete {
+                  postgresCommentCall(Create(comment))
+                }
+              }
+            } ~
+            delete {
+              complete {
+                postgresCommentCall(DeleteAll)
+              }
+            }
+      } ~
+          path("table") {
+            get {
+              complete {
+                postgresCommentCall(CreateTable)
+              }
+            } ~
+                delete {
+                  complete {
+                    postgresCommentCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("comment" / LongNumber) { commentId =>
+          get {
+            complete {
+              postgresCommentCall(Read(commentId))
+            }
+          } ~
+              put {
+                entity(as[Comment]) { comment =>
+                  complete {
+                    postgresCommentCall(Update(comment))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresCommentCall(Delete(commentId))
                 }
               }
         }

@@ -2,11 +2,9 @@ package com.startdown.actors
 
 import akka.actor.Actor
 import akka.pattern.pipe
-import com.startdown.models.{ItemDao, Item}
-import com.startdown.utils.{Responsive, Response, CRUD}
+import com.startdown.models.{Item, ItemDao}
+import com.startdown.utils.{CRUD, Response, Responsive}
 import spray.json._
-
-import scala.concurrent.Future
 
 /**
   * infm created it with love on 12/14/15. Enjoy ;)
@@ -14,6 +12,7 @@ import scala.concurrent.Future
 object PostgresItemActor extends CRUD[Item, Long]
 
 class PostgresItemActor extends Actor with Responsive[Item] {
+
   import PostgresItemActor._
   import com.startdown.models.ItemJsonProtocol._
   import context.dispatcher
