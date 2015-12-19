@@ -388,6 +388,14 @@ trait MainService extends WebService {
                   postgresHelpRequestCall(Delete(helpRequestId))
                 }
               }
+        } ~ path("help-request" / "submit") {
+      post {
+        entity(as[HelpRequest]) { helpRequest =>
+          complete {
+            postgresHelpRequestCall(Submit(helpRequest))
+          }
         }
+      }
+    }
   }
 }

@@ -13,7 +13,17 @@ import spray.json.DefaultJsonProtocol
 case class User(id: Option[Long],
                 username: String,
                 name: Option[String],
-                password: Option[String])
+                password: Option[String]) {
+  def passwordMatches(pass: String): Boolean = {
+    password.nonEmpty && BCrypt.checkpw(pass, password.get)
+  }
+}
+
+object BCryptHelper {
+  def password(pass: String) = BCrypt.hashpw(pass, BCrypt.gensalt())
+  def user(u: User) =
+    u.copy(password = Some(password(u.password.getOrElse("qwerty"))))
+}
 
 object UserJsonProtocol extends DefaultJsonProtocol {
   implicit val userFormat = jsonFormat4(User)
@@ -33,10 +43,6 @@ object UserDao extends PostgresSupport {
     def idx = index("idx_username", username, unique = true)
   }
 
-  def BCrypted(u: User) =
-    u.copy(password = Some(BCrypt.hashpw(u.password.getOrElse("qwerty"),
-      BCrypt.gensalt())))
-
   val users = TableQuery[Users]
 
   def createTable =
@@ -49,7 +55,7 @@ object UserDao extends PostgresSupport {
     db.run(users.result)
 
   def addUser(u: User) =
-    db.run(users += BCrypted(u))
+    db.run(users += BCryptHelper.user(u))
 
   def findUser(username: String) = {
     db.run(users.filter(_.username === username).result
@@ -68,7 +74,7 @@ object UserDao extends PostgresSupport {
     val columns = for {
       us <- users.filter(_.username === u.username)
     } yield getUpdatableColumns(us)
-    db.run(columns.update(getUpdatableValues(BCrypted(u))))
+    db.run(columns.update(getUpdatableValues(BCryptHelper.user(u))))
   }
 
   def deleteUser(username: String) = {

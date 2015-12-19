@@ -2,7 +2,7 @@ package com.startdown.utils
 
 import spray.json._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
@@ -13,9 +13,8 @@ case class Response[T](success: Boolean,
                        message: Option[String] = None)
 
 trait Responsive[T] {
-  def makeResponse(f: Future[Any])(implicit writer: spray.json.JsonWriter[Response[T]],
-                                   executor: scala.concurrent
-                                   .ExecutionContext) =
+  def makeResponse(f: Future[Any])(implicit writer: JsonWriter[Response[T]],
+                                   executor: ExecutionContext) =
     f.map {
       case single: Some[T] => new Response[T](true, single = single)
       case multiple: Seq[T] => new Response[T](true, multiple = Some(multiple))
