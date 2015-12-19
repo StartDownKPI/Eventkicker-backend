@@ -6,6 +6,8 @@ scalaVersion  := "2.11.7"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
+resolvers += "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"
+
 libraryDependencies ++= {
   val akkaV = "2.3.9"
   val sprayV = "1.3.3"
@@ -25,7 +27,8 @@ libraryDependencies ++= {
     "org.slf4j"           %   "slf4j-nop"     % "1.6.4",
     "org.specs2"          %%  "specs2-core"   % "2.3.11" % "test",
     "joda-time"           %   "joda-time"     % "2.7",
-    "org.joda"            %   "joda-convert"  % "1.7"
+    "org.joda"            %   "joda-convert"  % "1.7",
+    "me.lessis"           %%  "courier"       % "0.1.3"
   )
 }
 

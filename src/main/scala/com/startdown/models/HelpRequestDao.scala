@@ -8,12 +8,12 @@ import spray.json.DefaultJsonProtocol
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
   */
-case class HelpRequest(id: Option[Long],
-                       timeCreated: Option[DateTime],
-                       description: Option[String],
-                       isAccepted: Option[Boolean],
-                       authorId: Option[Long],
-                       itemId: Option[Long])
+case class HelpRequest(id: Option[Long] = None,
+                       timeCreated: Option[DateTime] = None,
+                       description: Option[String] = None,
+                       isAccepted: Option[Boolean] = None,
+                       authorId: Option[Long] = None,
+                       itemId: Option[Long] = None)
 
 object HelpRequestJsonProtocol extends DefaultJsonProtocol {
   import com.startdown.utils.JodaTimeJsonProtocol._

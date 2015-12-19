@@ -59,7 +59,15 @@ object UserDao extends PostgresSupport {
 
   def findUser(username: String) = {
     db.run(users.filter(_.username === username).result
-      map {
+        map {
+      case Seq(x, _*) => Some(x)
+      case _ => None
+    })
+  }
+
+  def findUser(id: Long) = {
+    db.run(users.filter(_.id === id).result
+        map {
       case Seq(x, _*) => Some(x)
       case _ => None
     })

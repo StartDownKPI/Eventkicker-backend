@@ -1,15 +1,107 @@
 package com.startdown.actors
 
-import akka.actor.Actor
-import akka.pattern.pipe
-import com.startdown.models.{HelpRequestDao, HelpRequest}
-import com.startdown.utils.{Response, Responsive, CRUD}
+import akka.actor.{Actor, Props}
+import akka.pattern.{ask, pipe}
+import akka.util.Timeout
+import com.startdown.actors.EmailActor.Send
+import com.startdown.models.{HelpRequest, HelpRequestDao}
+import com.startdown.server.WebService
+import com.startdown.utils.{CRUD, Response, Responsive}
 import spray.json._
+
+import scala.concurrent.duration._
 
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
   */
-object PostgresHelpRequestActor extends CRUD[HelpRequest, Long]
+case class HelpSuggest(senderId: Long,
+                       destinationUsername: String,
+                       eventId: Long,
+                       itemIds: List[Long])
+object HelpSuggestJsonProtocol extends DefaultJsonProtocol {
+  implicit val helpSuggestFormat = jsonFormat4(HelpSuggest)
+}
+
+object PostgresHelpRequestActor extends CRUD[HelpRequest, Long] {
+  case class Submit(helpSuggest: HelpSuggest)
+}
+
+trait HelpRequestService extends WebService {
+  import com.startdown.models.HelpRequestJsonProtocol._
+  import com.startdown.actors.HelpSuggestJsonProtocol._
+  import spray.httpx.SprayJsonSupport._
+
+  val postgresHelpRequestWorker = actorRefFactory.actorOf(
+    Props[PostgresHelpRequestActor], "postgres-help-request-worker")
+
+  def postgresHelpRequestCall(message: Any) =
+    (postgresHelpRequestWorker ? message).mapTo[String].map(identity)
+
+  val helpRequestServiceRoutes = {
+    import PostgresHelpRequestActor._
+    pathPrefix("help-requests") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            postgresHelpRequestCall(FetchAll)
+          }
+        } ~
+            post {
+              entity(as[HelpRequest]) { helpRequest =>
+                complete {
+                  postgresHelpRequestCall(Create(helpRequest))
+                }
+              }
+            } ~
+            delete {
+              complete {
+                postgresHelpRequestCall(DeleteAll)
+              }
+            }
+      } ~
+          path("table") {
+            get {
+              complete {
+                postgresHelpRequestCall(CreateTable)
+              }
+            } ~
+                delete {
+                  complete {
+                    postgresHelpRequestCall(DropTable)
+                  }
+                }
+          }
+    } ~
+        path("help-request" / LongNumber) { helpRequestId =>
+          get {
+            complete {
+              postgresHelpRequestCall(Read(helpRequestId))
+            }
+          } ~
+              put {
+                entity(as[HelpRequest]) { helpRequest =>
+                  complete {
+                    postgresHelpRequestCall(Update(helpRequest))
+                  }
+                }
+              } ~
+              delete {
+                complete {
+                  postgresHelpRequestCall(Delete(helpRequestId))
+                }
+              }
+        } ~
+        path("help-request" / "submit") {
+          post {
+            entity(as[HelpSuggest]) { helpSuggest =>
+              complete {
+                postgresHelpRequestCall(Submit(helpSuggest))
+              }
+            }
+          }
+    }
+  }
+}
 
 class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
   import PostgresHelpRequestActor._
@@ -17,6 +109,7 @@ class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
   import context.dispatcher
 
   implicit val responseFormat = jsonFormat4(Response[HelpRequest])
+  val emailActor = context.actorOf(Props[EmailActor], "email-worker")
 
   override def receive = {
     case FetchAll =>
@@ -24,6 +117,20 @@ class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
 
     case Create(hr: HelpRequest) =>
       makeResponse(HelpRequestDao.addHelpRequest(hr)) pipeTo sender
+
+    case Submit(hs: HelpSuggest) => {
+      implicit val timeout = Timeout(10.seconds)
+      /*hs.itemIds map {
+        id => self ? Create(new HelpRequest(authorId = Some(hs.senderId),
+          itemId = Some(id)))
+      }*/
+      val emailFuture = emailActor ? Send(hs.destinationUsername,
+        s"HelpSuggest from ${hs.senderId} for ${hs.eventId}",
+        s"""Hey yo! I've heard that this event gonna be crazy, so
+            |plz, take this help: ${hs.itemIds mkString ", "}""".stripMargin)
+
+      makeResponse(emailFuture) pipeTo sender
+    }
 
     case Read(id: Long) =>
       makeResponse(HelpRequestDao.findHelpRequest(id)) pipeTo sender

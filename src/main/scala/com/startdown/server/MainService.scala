@@ -16,7 +16,6 @@ trait MainService extends WebService {
   import com.startdown.models.ItemJsonProtocol._
   import com.startdown.models.CommentJsonProtocol._
   import com.startdown.models.LikeJsonProtocol._
-  import com.startdown.models.HelpRequestJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -48,12 +47,6 @@ trait MainService extends WebService {
 
   def postgresLikeCall(message: Any) =
     (postgresLikeWorker ? message).mapTo[String].map(identity)
-
-  val postgresHelpRequestWorker = actorRefFactory.actorOf(
-    Props[PostgresHelpRequestActor], "postgres-help-request-worker")
-
-  def postgresHelpRequestCall(message: Any) =
-    (postgresHelpRequestWorker ? message).mapTo[String].map(identity)
 
   val userServiceRoutes = {
     import PostgresUserActor._
@@ -333,69 +326,5 @@ trait MainService extends WebService {
                 }
               }
         }
-  }
-
-  val helpRequestServiceRoutes = {
-    import PostgresHelpRequestActor._
-    pathPrefix("help-requests") {
-      pathEndOrSingleSlash {
-        get {
-          complete {
-            postgresHelpRequestCall(FetchAll)
-          }
-        } ~
-            post {
-              entity(as[HelpRequest]) { helpRequest =>
-                complete {
-                  postgresHelpRequestCall(Create(helpRequest))
-                }
-              }
-            } ~
-            delete {
-              complete {
-                postgresHelpRequestCall(DeleteAll)
-              }
-            }
-      } ~
-          path("table") {
-            get {
-              complete {
-                postgresHelpRequestCall(CreateTable)
-              }
-            } ~
-                delete {
-                  complete {
-                    postgresHelpRequestCall(DropTable)
-                  }
-                }
-          }
-    } ~
-        path("help-request" / LongNumber) { helpRequestId =>
-          get {
-            complete {
-              postgresHelpRequestCall(Read(helpRequestId))
-            }
-          } ~
-              put {
-                entity(as[HelpRequest]) { helpRequest =>
-                  complete {
-                    postgresHelpRequestCall(Update(helpRequest))
-                  }
-                }
-              } ~
-              delete {
-                complete {
-                  postgresHelpRequestCall(Delete(helpRequestId))
-                }
-              }
-        } ~ path("help-request" / "submit") {
-      post {
-        entity(as[HelpRequest]) { helpRequest =>
-          complete {
-            postgresHelpRequestCall(Submit(helpRequest))
-          }
-        }
-      }
-    }
   }
 }
