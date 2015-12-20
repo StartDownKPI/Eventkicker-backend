@@ -67,6 +67,17 @@ object EventDao extends PostgresSupport {
     })
   }
 
+  // Currently implemented like a shit, will add native Postgres search support.
+  def searchEvents(keywords: List[String]) = {
+    db.run(events.result.map(result => {
+      result.filter { event =>
+        keywords.map { w =>
+          event.description.getOrElse("").contains(w)
+        } reduceLeft ((found, acc) => found || acc)
+      }
+    }))
+  }
+
   def getUpdatableColumns(es: Events) =
     (es.name, es.timeCreated, es.timeScheduled, es.description,
       es.pictureUrl, es.authorId)

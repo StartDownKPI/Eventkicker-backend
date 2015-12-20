@@ -1,19 +1,26 @@
 package com.startdown.actors
 
-import akka.actor.{Props, Actor}
+import akka.actor.{Actor, Props}
 import akka.pattern.{ask, pipe}
-import com.startdown.models.{EventDao, Event}
+import akka.util.Timeout
+import com.startdown.models.{Event, EventDao}
 import com.startdown.server.WebService
-import com.startdown.utils.{Response, Responsive, CRUD}
+import com.startdown.utils.{CRUD, Response, Responsive}
 import spray.json._
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
 
 /**
   * infm created it with love on 11/8/15. Enjoy ;)
   */
+case class SearchQuery(keywords: List[String])
+object SearchQueryJsonProtocol extends DefaultJsonProtocol {
+  implicit val searchQueryFormat = jsonFormat1(SearchQuery)
+}
+
 trait EventService extends WebService {
   import com.startdown.models.EventJsonProtocol._
+  import com.startdown.actors.SearchQueryJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresEventWorker = actorRefFactory.actorOf(Props[PostgresEventActor],
@@ -55,6 +62,15 @@ trait EventService extends WebService {
                     postgresEventCall(DropTable)
                   }
                 }
+          } ~
+          path("search") {
+            get {
+              parameter('keywords) { keywords =>
+                complete {
+                  postgresEventCall(Search(keywords.split(",").toList))
+                }
+              }
+            }
           }
     } ~
         path("event" / LongNumber) { eventId =>
@@ -79,7 +95,9 @@ trait EventService extends WebService {
   }
 }
 
-object PostgresEventActor extends CRUD[Event, Long]
+object PostgresEventActor extends CRUD[Event, Long] {
+  case class Search(keywords: List[String])
+}
 
 class PostgresEventActor extends Actor with Responsive[Event] {
   import PostgresEventActor._
@@ -112,5 +130,12 @@ class PostgresEventActor extends Actor with Responsive[Event] {
 
     case DropTable =>
       makeResponse(EventDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
+
+    case Search(keywords: List[String]) => {
+      implicit val timeout = Timeout(120.seconds)
+      makeResponse(EventDao.searchEvents(keywords).map {
+        seq => if (seq.nonEmpty) seq else None
+      }) pipeTo sender
+    }
   }
 }
