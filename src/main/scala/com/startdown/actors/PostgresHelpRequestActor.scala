@@ -23,10 +23,6 @@ object HelpSuggestJsonProtocol extends DefaultJsonProtocol {
   implicit val helpSuggestFormat = jsonFormat5(HelpSuggest)
 }
 
-object PostgresHelpRequestActor extends CRUD[HelpRequest, Long] {
-  case class Submit(helpSuggest: HelpSuggest)
-}
-
 trait HelpRequestService extends WebService {
   import com.startdown.actors.HelpSuggestJsonProtocol._
   import com.startdown.models.HelpRequestJsonProtocol._
@@ -104,6 +100,10 @@ trait HelpRequestService extends WebService {
   }
 }
 
+object PostgresHelpRequestActor extends CRUD[HelpRequest, Long] {
+  case class Submit(helpSuggest: HelpSuggest)
+}
+
 class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
   import PostgresHelpRequestActor._
   import com.startdown.models.HelpRequestJsonProtocol._
@@ -120,16 +120,7 @@ class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
       makeResponse(HelpRequestDao.addHelpRequest(hr)) pipeTo sender
 
     case Submit(hs: HelpSuggest) => {
-      implicit val timeout = Timeout(60.seconds)
-/*
-      val helpRequests = for {
-        id <- hs.itemIds
-        f <- self ? Create(new HelpRequest(authorId = Some(hs.senderId),
-          description = hs.description, itemId = Some(id)))
-        obj <- f
-        if obj.isInstanceOf[HelpRequest]
-      } yield List(obj)
-*/
+      implicit val timeout = Timeout(120.seconds)
       val itemIds = hs.itemIds map { id =>
         self ? Create(new HelpRequest(authorId = Some(hs.senderId),
           description = hs.description, itemId = Some(id)))

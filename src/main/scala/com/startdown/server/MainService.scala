@@ -12,7 +12,6 @@ import com.startdown.models._
 trait MainService extends WebService {
 
   import com.startdown.models.UserJsonProtocol._
-  import com.startdown.models.EventJsonProtocol._
   import com.startdown.models.ItemJsonProtocol._
   import com.startdown.models.CommentJsonProtocol._
   import com.startdown.models.LikeJsonProtocol._
@@ -23,12 +22,6 @@ trait MainService extends WebService {
 
   def postgresUserCall(message: Any) =
     (postgresUserWorker ? message).mapTo[String].map(identity)
-
-  val postgresEventWorker = actorRefFactory.actorOf(Props[PostgresEventActor],
-    "postgres-event-worker")
-
-  def postgresEventCall(message: Any) =
-    (postgresEventWorker ? message).mapTo[String].map(identity)
 
   val postgresItemWorker = actorRefFactory.actorOf(Props[PostgresItemActor],
     "postgres-item-worker")
@@ -99,63 +92,6 @@ trait MainService extends WebService {
               delete {
                 complete {
                   postgresUserCall(Delete(username))
-                }
-              }
-        }
-  }
-
-
-  val eventServiceRoutes = {
-    import PostgresEventActor._
-    pathPrefix("events") {
-      pathEndOrSingleSlash {
-        get {
-          complete {
-            postgresEventCall(FetchAll)
-          }
-        } ~
-            post {
-              entity(as[Event]) { event =>
-                complete {
-                  postgresEventCall(Create(event))
-                }
-              }
-            } ~
-            delete {
-              complete {
-                postgresEventCall(DeleteAll)
-              }
-            }
-      } ~
-          path("table") {
-            get {
-              complete {
-                postgresEventCall(CreateTable)
-              }
-            } ~
-                delete {
-                  complete {
-                    postgresEventCall(DropTable)
-                  }
-                }
-          }
-    } ~
-        path("event" / LongNumber) { eventId =>
-          get {
-            complete {
-              postgresEventCall(Read(eventId))
-            }
-          } ~
-              put {
-                entity(as[Event]) { event =>
-                  complete {
-                    postgresEventCall(Update(event))
-                  }
-                }
-              } ~
-              delete {
-                complete {
-                  postgresEventCall(Delete(eventId))
                 }
               }
         }

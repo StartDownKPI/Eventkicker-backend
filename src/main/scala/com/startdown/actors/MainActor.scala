@@ -6,7 +6,9 @@ import com.startdown.server.MainService
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
   */
-class MainActor extends Actor with MainService with HelpRequestService {
+class MainActor extends Actor with MainService
+                              with HelpRequestService
+                              with EventService {
   def actorRefFactory = context
 
   def receive = runRoute(
