@@ -32,3 +32,4 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 src/main/scala/com/startdown/utils/Credentials.scala
+nohup.out

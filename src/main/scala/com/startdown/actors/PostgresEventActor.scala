@@ -13,14 +13,8 @@ import scala.concurrent.duration._
 /**
   * infm created it with love on 11/8/15. Enjoy ;)
   */
-case class SearchQuery(keywords: List[String])
-object SearchQueryJsonProtocol extends DefaultJsonProtocol {
-  implicit val searchQueryFormat = jsonFormat1(SearchQuery)
-}
-
 trait EventService extends WebService {
   import com.startdown.models.EventJsonProtocol._
-  import com.startdown.actors.SearchQueryJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresEventWorker = actorRefFactory.actorOf(Props[PostgresEventActor],
