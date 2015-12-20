@@ -9,5 +9,5 @@ import scala.concurrent.duration._
   */
 trait WebService extends HttpService {
   implicit def executionContext = actorRefFactory.dispatcher
-  implicit val timeout = Timeout(120.seconds)
+  implicit val timeout = Timeout(240.seconds)
 }

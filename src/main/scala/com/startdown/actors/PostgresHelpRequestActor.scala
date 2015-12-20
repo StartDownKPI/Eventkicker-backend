@@ -16,10 +16,11 @@ import scala.concurrent.duration._
   */
 case class HelpSuggest(senderId: Long,
                        destinationUsername: String,
+                       description: Option[String],
                        eventId: Long,
                        itemIds: List[Long])
 object HelpSuggestJsonProtocol extends DefaultJsonProtocol {
-  implicit val helpSuggestFormat = jsonFormat4(HelpSuggest)
+  implicit val helpSuggestFormat = jsonFormat5(HelpSuggest)
 }
 
 object PostgresHelpRequestActor extends CRUD[HelpRequest, Long] {
@@ -27,8 +28,8 @@ object PostgresHelpRequestActor extends CRUD[HelpRequest, Long] {
 }
 
 trait HelpRequestService extends WebService {
-  import com.startdown.models.HelpRequestJsonProtocol._
   import com.startdown.actors.HelpSuggestJsonProtocol._
+  import com.startdown.models.HelpRequestJsonProtocol._
   import spray.httpx.SprayJsonSupport._
 
   val postgresHelpRequestWorker = actorRefFactory.actorOf(
@@ -119,16 +120,29 @@ class PostgresHelpRequestActor extends Actor with Responsive[HelpRequest] {
       makeResponse(HelpRequestDao.addHelpRequest(hr)) pipeTo sender
 
     case Submit(hs: HelpSuggest) => {
-      implicit val timeout = Timeout(10.seconds)
-      /*hs.itemIds map {
-        id => self ? Create(new HelpRequest(authorId = Some(hs.senderId),
-          itemId = Some(id)))
-      }*/
+      implicit val timeout = Timeout(60.seconds)
+/*
+      val helpRequests = for {
+        id <- hs.itemIds
+        f <- self ? Create(new HelpRequest(authorId = Some(hs.senderId),
+          description = hs.description, itemId = Some(id)))
+        obj <- f
+        if obj.isInstanceOf[HelpRequest]
+      } yield List(obj)
+*/
+      val itemIds = hs.itemIds map { id =>
+        self ? Create(new HelpRequest(authorId = Some(hs.senderId),
+          description = hs.description, itemId = Some(id)))
+      } filter {
+        case hr: HelpRequest => true
+        case _ => false
+      } map {
+        case hr: HelpRequest => hr.itemId.get
+      } mkString ", "
       val emailFuture = emailActor ? Send(hs.destinationUsername,
         s"HelpSuggest from ${hs.senderId} for ${hs.eventId}",
         s"""Hey yo! I've heard that this event gonna be crazy, so
-            |plz, take this help: ${hs.itemIds mkString ", "}""".stripMargin)
-
+            |plz, take this help: $itemIds""".stripMargin)
       makeResponse(emailFuture) pipeTo sender
     }
 
