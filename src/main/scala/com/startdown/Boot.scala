@@ -21,5 +21,5 @@ object Boot extends App with PostgresSupport {
   startPostgres
 
   implicit val timeout = Timeout(120.seconds)
-  IO(Http) ? Http.Bind(service, interface = "localhost", port = 3600)
+  IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 3600)
 }
