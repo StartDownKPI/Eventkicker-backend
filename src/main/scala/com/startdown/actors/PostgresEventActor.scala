@@ -98,7 +98,7 @@ trait EventService extends WebService {
 
 object PostgresEventActor extends CRUD[Event, Long] {
   case class Search(keywords: List[String])
-  case class GetForUser(username: String)
+  case class GetForUser(userId: Long)
   case class GetItems(id: Long)
 }
 
@@ -140,8 +140,8 @@ class PostgresEventActor extends Actor with Responsive[Event] {
         seq => if (seq.nonEmpty) seq else None
       }) pipeTo sender
 
-    case GetForUser(un: String) =>
-      makeResponse(EventDao.getForUser(un)) pipeTo sender
+    case GetForUser(userId: Long) =>
+      makeResponse(EventDao.getForUser(userId)) pipeTo sender
 
     case GetItems(eventId: Long) =>
       implicit val timeout = Timeout(120.seconds)

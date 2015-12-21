@@ -57,6 +57,7 @@ object UserDao extends PostgresSupport {
   def addUser(u: User) =
     db.run(users += BCryptHelper.user(u))
 
+  @Deprecated
   def findUser(username: String) = {
     db.run(users.filter(_.username === username).result
         map {
@@ -85,8 +86,19 @@ object UserDao extends PostgresSupport {
     db.run(columns.update(getUpdatableValues(BCryptHelper.user(u))))
   }
 
+  @Deprecated
   def deleteUser(username: String) = {
     val filterQ = users.filter(_.username === username)
+    db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
+      res match {
+        case Seq(x, _*) => Some(x)
+        case _ => None
+      }
+    })
+  }
+
+  def deleteUser(userId: Long) = {
+    val filterQ = users.filter(_.id === userId)
     db.run(filterQ.result zip filterQ.delete map { case (res, _) =>
       res match {
         case Seq(x, _*) => Some(x)

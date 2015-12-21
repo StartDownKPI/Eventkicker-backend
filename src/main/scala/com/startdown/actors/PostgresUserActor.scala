@@ -59,11 +59,11 @@ trait UserService extends WebService {
                   }
                 }
           } ~
-          path(Segment) { username =>
+          path(LongNumber) { userId =>
             pathEndOrSingleSlash {
               get {
                 complete {
-                  postgresUserCall(Read(username))
+                  postgresUserCall(Read(userId))
                 }
               } ~
                   put {
@@ -75,15 +75,15 @@ trait UserService extends WebService {
                   } ~
                   delete {
                     complete {
-                      postgresUserCall(Delete(username))
+                      postgresUserCall(Delete(userId))
                     }
                   }
             }
           } ~
-          path(Segment / "events") { username =>
+          path(LongNumber / "events") { userId =>
             get {
               complete {
-                postgresUserCall(GetEvents(username))
+                postgresUserCall(GetEvents(userId))
               }
             }
           }
@@ -91,8 +91,8 @@ trait UserService extends WebService {
   }
 }
 
-object PostgresUserActor extends CRUD[User, String] {
-  case class GetEvents(username: String)
+object PostgresUserActor extends CRUD[User, Long] {
+  case class GetEvents(userId: Long)
 }
 
 class PostgresUserActor extends Actor with Responsive[User] {
@@ -110,14 +110,14 @@ class PostgresUserActor extends Actor with Responsive[User] {
     case Create(u: User) =>
       makeResponse(UserDao.addUser(u)) pipeTo sender
 
-    case Read(username: String) =>
-      makeResponse(UserDao.findUser(username)) pipeTo sender
+    case Read(userId: Long) =>
+      makeResponse(UserDao.findUser(userId)) pipeTo sender
 
     case Update(u: User) =>
       makeResponse(UserDao.updateUser(u)) pipeTo sender
 
-    case Delete(username: String) =>
-      makeResponse(UserDao.deleteUser(username)) pipeTo sender
+    case Delete(userId: Long) =>
+      makeResponse(UserDao.deleteUser(userId)) pipeTo sender
 
     case DeleteAll =>
       makeResponse(UserDao.deleteAll) pipeTo sender
@@ -128,9 +128,9 @@ class PostgresUserActor extends Actor with Responsive[User] {
     case DropTable =>
       makeResponse(UserDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
 
-    case GetEvents(un: String) =>
+    case GetEvents(userId: Long) =>
       implicit val timeout = Timeout(120.seconds)
       context.actorSelection("../postgres-event-worker") ? PostgresEventActor
-          .GetForUser(un) pipeTo sender
+          .GetForUser(userId) pipeTo sender
   }
 }

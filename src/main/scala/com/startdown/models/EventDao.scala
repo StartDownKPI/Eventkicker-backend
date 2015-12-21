@@ -110,11 +110,11 @@ object EventDao extends PostgresSupport {
   def deleteAll =
     db.run(events.delete)
 
-  def getForUser(un: String) =
+  def getForUser(userId: Long) =
   db.run {
     val joined = for {
       (e, u) <- events join users on (_.authorId === _.id)
-    } yield (e, u.username)
-    joined.result.map(r => r.filter(t => t._2 == un).map(_._1))
+    } yield (e, u.id)
+    joined.result.map(r => r.filter(t => t._2 == userId).map(_._1))
   }
 }
