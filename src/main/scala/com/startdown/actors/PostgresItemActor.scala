@@ -77,7 +77,9 @@ trait ItemService extends WebService {
   }
 }
 
-object PostgresItemActor extends CRUD[Item, Long]
+object PostgresItemActor extends CRUD[Item, Long] {
+  case class GetForEvent(eventId: Long)
+}
 
 class PostgresItemActor extends Actor with Responsive[Item] {
 
@@ -111,5 +113,8 @@ class PostgresItemActor extends Actor with Responsive[Item] {
 
     case DropTable =>
       makeResponse(ItemDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
+
+    case GetForEvent(eventId: Long) =>
+      makeResponse(ItemDao.getForEvent(eventId)) pipeTo sender
   }
 }

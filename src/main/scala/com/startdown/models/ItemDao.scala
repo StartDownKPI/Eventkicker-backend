@@ -4,6 +4,7 @@ import com.startdown.utils.PostgresSupport
 import slick.driver.PostgresDriver.api._
 import slick.lifted.Tag
 import spray.json.DefaultJsonProtocol
+import EventDao._
 
 /**
   * infm created it with love on 12/14/15. Enjoy ;)
@@ -82,4 +83,12 @@ object ItemDao extends PostgresSupport {
 
   def deleteAll =
     db.run(items.delete)
+
+  def getForEvent(eventId: Long) =
+    db.run {
+      val joined = for {
+        (e, u) <- items join events on (_.eventId === _.id)
+      } yield (e, u.id)
+      joined.result.map(r => r.filter(t => t._2 == eventId).map(_._1))
+    }
 }

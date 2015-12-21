@@ -84,6 +84,13 @@ trait EventService extends WebService {
                     postgresEventCall(Delete(eventId))
                   }
                 }
+          } ~
+          path(LongNumber / "items") { eventId =>
+            get {
+              complete {
+                postgresEventCall(GetItems(eventId))
+              }
+            }
           }
     }
   }
@@ -92,6 +99,7 @@ trait EventService extends WebService {
 object PostgresEventActor extends CRUD[Event, Long] {
   case class Search(keywords: List[String])
   case class GetForUser(username: String)
+  case class GetItems(id: Long)
 }
 
 class PostgresEventActor extends Actor with Responsive[Event] {
@@ -134,5 +142,10 @@ class PostgresEventActor extends Actor with Responsive[Event] {
 
     case GetForUser(un: String) =>
       makeResponse(EventDao.getForUser(un)) pipeTo sender
+
+    case GetItems(eventId: Long) =>
+      implicit val timeout = Timeout(120.seconds)
+      context.actorSelection("../postgres-item-worker") ? PostgresItemActor
+          .GetForEvent(eventId) pipeTo sender
   }
 }

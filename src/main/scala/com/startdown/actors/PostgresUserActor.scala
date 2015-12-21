@@ -92,9 +92,7 @@ trait UserService extends WebService {
 }
 
 object PostgresUserActor extends CRUD[User, String] {
-
   case class GetEvents(username: String)
-
 }
 
 class PostgresUserActor extends Actor with Responsive[User] {

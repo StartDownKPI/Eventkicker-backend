@@ -117,13 +117,4 @@ object EventDao extends PostgresSupport {
     } yield (e, u.username)
     joined.result.map(r => r.filter(t => t._2 == un).map(_._1))
   }
-/*
-    db.run(users.filter(_.username === un).result).flatMap {
-      case Seq(x, _*) =>
-        db.run(EventDao.events.filter(_.authorId === x.id).result.map {
-          events => if (events.nonEmpty) events else None
-        })
-      case _ => Future { None }
-    }
-*/
 }
