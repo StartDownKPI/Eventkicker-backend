@@ -59,7 +59,7 @@ trait UserService extends WebService {
                   }
                 }
           } ~
-          path(LongNumber) { userId =>
+          pathPrefix(LongNumber) { userId =>
             pathEndOrSingleSlash {
               get {
                 complete {
@@ -78,14 +78,16 @@ trait UserService extends WebService {
                       postgresUserCall(Delete(userId))
                     }
                   }
-            }
-          } ~
-          path(LongNumber / "events") { userId =>
-            get {
-              complete {
-                postgresUserCall(GetEvents(userId))
-              }
-            }
+            }  ~
+                pathPrefix("events") {
+                    pathEndOrSingleSlash {
+                      get {
+                        complete {
+                          postgresUserCall(GetEvents(userId))
+                        }
+                      }
+                    }
+                }
           }
     }
   }
