@@ -65,32 +65,33 @@ trait EventService extends WebService {
                 }
               }
             }
-          }
-    } ~
-        path("event" / LongNumber) { eventId =>
-          get {
-            complete {
-              postgresEventCall(Read(eventId))
-            }
           } ~
-              put {
-                entity(as[Event]) { event =>
+          path(LongNumber) { eventId =>
+            get {
+              complete {
+                postgresEventCall(Read(eventId))
+              }
+            } ~
+                put {
+                  entity(as[Event]) { event =>
+                    complete {
+                      postgresEventCall(Update(event))
+                    }
+                  }
+                } ~
+                delete {
                   complete {
-                    postgresEventCall(Update(event))
+                    postgresEventCall(Delete(eventId))
                   }
                 }
-              } ~
-              delete {
-                complete {
-                  postgresEventCall(Delete(eventId))
-                }
-              }
-        }
+          }
+    }
   }
 }
 
 object PostgresEventActor extends CRUD[Event, Long] {
   case class Search(keywords: List[String])
+  case class GetForUser(username: String)
 }
 
 class PostgresEventActor extends Actor with Responsive[Event] {
@@ -125,11 +126,13 @@ class PostgresEventActor extends Actor with Responsive[Event] {
     case DropTable =>
       makeResponse(EventDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
 
-    case Search(keywords: List[String]) => {
+    case Search(keywords: List[String]) =>
       implicit val timeout = Timeout(120.seconds)
       makeResponse(EventDao.searchEvents(keywords).map {
         seq => if (seq.nonEmpty) seq else None
       }) pipeTo sender
-    }
+
+    case GetForUser(un: String) =>
+      makeResponse(EventDao.getForUser(un)) pipeTo sender
   }
 }

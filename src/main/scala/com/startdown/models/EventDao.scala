@@ -1,9 +1,12 @@
 package com.startdown.models
 
 import com.github.tototoshi.slick.PostgresJodaSupport._
+import com.startdown.models.UserDao._
 import com.startdown.utils.{CustomPostgresDriver, PostgresSupport}
 import org.joda.time.DateTime
 import spray.json._
+
+import scala.concurrent.Future
 
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
@@ -106,4 +109,21 @@ object EventDao extends PostgresSupport {
 
   def deleteAll =
     db.run(events.delete)
+
+  def getForUser(un: String) =
+  db.run {
+    val joined = for {
+      (e, u) <- events join users on (_.authorId === _.id)
+    } yield (e, u.username)
+    joined.result.map(r => r.filter(t => t._2 == un).map(_._1))
+  }
+/*
+    db.run(users.filter(_.username === un).result).flatMap {
+      case Seq(x, _*) =>
+        db.run(EventDao.events.filter(_.authorId === x.id).result.map {
+          events => if (events.nonEmpty) events else None
+        })
+      case _ => Future { None }
+    }
+*/
 }

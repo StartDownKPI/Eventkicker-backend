@@ -11,17 +11,10 @@ import com.startdown.models._
 
 trait MainService extends WebService {
 
-  import com.startdown.models.UserJsonProtocol._
   import com.startdown.models.ItemJsonProtocol._
   import com.startdown.models.CommentJsonProtocol._
   import com.startdown.models.LikeJsonProtocol._
   import spray.httpx.SprayJsonSupport._
-
-  val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
-    "postgres-user-worker")
-
-  def postgresUserCall(message: Any) =
-    (postgresUserWorker ? message).mapTo[String].map(identity)
 
   val postgresItemWorker = actorRefFactory.actorOf(Props[PostgresItemActor],
     "postgres-item-worker")
@@ -40,62 +33,6 @@ trait MainService extends WebService {
 
   def postgresLikeCall(message: Any) =
     (postgresLikeWorker ? message).mapTo[String].map(identity)
-
-  val userServiceRoutes = {
-    import PostgresUserActor._
-    pathPrefix("users") {
-      pathEndOrSingleSlash {
-        get {
-          complete {
-            postgresUserCall(FetchAll)
-          }
-        } ~
-            post {
-              entity(as[User]) { user =>
-                complete {
-                  postgresUserCall(Create(user))
-                }
-              }
-            } ~
-            delete {
-              complete {
-                postgresUserCall(DeleteAll)
-              }
-            }
-      } ~
-          path("table") {
-            get {
-              complete {
-                postgresUserCall(CreateTable)
-              }
-            } ~
-                delete {
-                  complete {
-                    postgresUserCall(DropTable)
-                  }
-                }
-          }
-    } ~
-        path("user" / Segment) { username =>
-          get {
-            complete {
-              postgresUserCall(Read(username))
-            }
-          } ~
-              put {
-                entity(as[User]) { user =>
-                  complete {
-                    postgresUserCall(Update(user))
-                  }
-                }
-              } ~
-              delete {
-                complete {
-                  postgresUserCall(Delete(username))
-                }
-              }
-        }
-  }
 
   val itemServiceRoutes = {
     import PostgresItemActor._

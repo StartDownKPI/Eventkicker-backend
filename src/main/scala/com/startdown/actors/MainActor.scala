@@ -8,7 +8,8 @@ import com.startdown.server.MainService
   */
 class MainActor extends Actor with MainService
                               with HelpRequestService
-                              with EventService {
+                              with EventService
+                              with UserService {
   def actorRefFactory = context
 
   def receive = runRoute(
