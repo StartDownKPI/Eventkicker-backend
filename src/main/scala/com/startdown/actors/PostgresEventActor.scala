@@ -8,6 +8,7 @@ import com.startdown.server.WebService
 import com.startdown.utils.{CRUD, Response, Responsive}
 import spray.json._
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 /**
@@ -65,32 +66,51 @@ trait EventService extends WebService {
                 }
               }
             }
-          } ~
-          path(LongNumber) { eventId =>
+          } ~ path("named") {
             get {
               complete {
-                postgresEventCall(Read(eventId))
+                postgresEventCall(FetchAllNamed)
               }
-            } ~
-                put {
-                  entity(as[Event]) { event =>
+            }
+          } ~
+          pathPrefix(LongNumber) { eventId =>
+            pathEndOrSingleSlash {
+              get {
+                complete {
+                  postgresEventCall(Read(eventId))
+                }
+              } ~
+                  put {
+                    entity(as[Event]) { event =>
+                      complete {
+                        postgresEventCall(Update(event))
+                      }
+                    }
+                  } ~
+                  delete {
                     complete {
-                      postgresEventCall(Update(event))
+                      postgresEventCall(Delete(eventId))
+                    }
+                  }
+            } ~
+                pathPrefix("items") {
+                  pathEndOrSingleSlash {
+                    get {
+                      complete {
+                        postgresEventCall(GetItems(eventId))
+                      }
                     }
                   }
                 } ~
-                delete {
-                  complete {
-                    postgresEventCall(Delete(eventId))
+                pathPrefix("author") {
+                  pathEndOrSingleSlash {
+                    get {
+                      complete {
+                        postgresEventCall(GetAuthor(eventId))
+                      }
+                    }
                   }
                 }
-          } ~
-          path(LongNumber / "items") { eventId =>
-            get {
-              complete {
-                postgresEventCall(GetItems(eventId))
-              }
-            }
           }
     }
   }
@@ -100,6 +120,8 @@ object PostgresEventActor extends CRUD[Event, Long] {
   case class Search(keywords: List[String])
   case class GetForUser(userId: Long)
   case class GetItems(id: Long)
+  case object FetchAllNamed
+  case class GetAuthor(id: Long)
 }
 
 class PostgresEventActor extends Actor with Responsive[Event] {
@@ -146,6 +168,18 @@ class PostgresEventActor extends Actor with Responsive[Event] {
     case GetItems(eventId: Long) =>
       implicit val timeout = Timeout(120.seconds)
       context.actorSelection("../postgres-item-worker") ? PostgresItemActor
-          .GetForEvent(eventId) pipeTo sender
+          .GetForEvent(eventId)
+
+    case GetAuthor(eventId: Long) =>
+      implicit val timeout = Timeout(120.seconds)
+      def getAuthor0(authorId: Long) =
+        context.actorSelection("../postgres-user-worker") ? PostgresUserActor
+            .Read(authorId)
+      EventDao.findEvent(eventId).flatMap {
+        case Some(x) => getAuthor0(x.authorId.get)
+        case _ => makeResponse(Future { None })
+      } recoverWith {
+        case t: Throwable => makeResponse(Future { t })
+      } pipeTo sender
   }
 }
