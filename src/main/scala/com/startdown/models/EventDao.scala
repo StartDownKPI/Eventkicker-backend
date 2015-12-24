@@ -6,8 +6,6 @@ import com.startdown.utils.{CustomPostgresDriver, PostgresSupport}
 import org.joda.time.DateTime
 import spray.json._
 
-import scala.concurrent.Future
-
 /**
   * infm created it with love on 11/7/15. Enjoy ;)
   */
@@ -20,11 +18,26 @@ case class Event(id: Option[Long],
                  pictureUrl: Option[String],
                  authorId: Option[Long])
 
+case class EventWithAuthorName(id: Option[Long],
+                               name: Option[String],
+                               timeCreated: Option[DateTime],
+                               timeScheduled: Option[DateTime],
+                               description: Option[String],
+                               pictureUrl: Option[String],
+                               authorId: Option[Long],
+                               authorName: Option[String]) {
+  def this(event: Event, name: Option[String]) =
+    this(event.id, event.name, event.timeCreated, event.timeScheduled, event
+        .description, event.pictureUrl, event.authorId, name)
+}
+
 object EventJsonProtocol extends DefaultJsonProtocol {
   import com.startdown.utils.JodaTimeJsonProtocol._
   implicit val eventFormat = jsonFormat(Event, "id", "name", "timeCreated",
     "timeScheduled", "description", "pictureUrl", "authorId")
-
+  implicit val eventNamedFormat = jsonFormat(EventWithAuthorName, "id", "name",
+    "timeCreated", "timeScheduled", "description", "pictureUrl", "authorId",
+    "authorName")
 }
 
 object EventDao extends PostgresSupport {
@@ -58,6 +71,17 @@ object EventDao extends PostgresSupport {
 
   def listAllEvents =
     db.run(events.result)
+
+  def listAllEventsWithAuthorNames =
+    db.run {
+      val joined = for {
+        (e, u) <- events join users on (_.authorId === _.id)
+      } yield (e, u.name)
+      joined.result.map { r => r.map {
+        case (event, name) => new EventWithAuthorName(event, name)
+      }
+      }
+    }
 
   def addEvent(e: Event) =
     db.run(events += e.copy(timeCreated = Some(DateTime.now())))

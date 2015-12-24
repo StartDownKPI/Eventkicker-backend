@@ -3,7 +3,7 @@ package com.startdown.actors
 import akka.actor.{Actor, Props}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
-import com.startdown.models.{Event, EventDao}
+import com.startdown.models.{Event, EventDao, EventWithAuthorName}
 import com.startdown.server.WebService
 import com.startdown.utils.{CRUD, Response, Responsive}
 import spray.json._
@@ -66,10 +66,13 @@ trait EventService extends WebService {
                 }
               }
             }
-          } ~ path("named") {
-            get {
-              complete {
-                postgresEventCall(FetchAllNamed)
+          } ~
+          pathPrefix("named") {
+            pathEndOrSingleSlash {
+              get {
+                complete {
+                  postgresEventCall(FetchAllWithAuthorNames)
+                }
               }
             }
           } ~
@@ -117,10 +120,10 @@ trait EventService extends WebService {
 }
 
 object PostgresEventActor extends CRUD[Event, Long] {
+  case object FetchAllWithAuthorNames
   case class Search(keywords: List[String])
   case class GetForUser(userId: Long)
   case class GetItems(id: Long)
-  case object FetchAllNamed
   case class GetAuthor(id: Long)
 }
 
@@ -130,10 +133,21 @@ class PostgresEventActor extends Actor with Responsive[Event] {
   import context.dispatcher
 
   implicit val responseFormat = jsonFormat4(Response[Event])
+  implicit val response1Format = jsonFormat4(Response[EventWithAuthorName])
 
   override def receive = {
     case FetchAll =>
       makeResponse(EventDao.listAllEvents) pipeTo sender
+
+    case FetchAllWithAuthorNames =>
+      type T = EventWithAuthorName
+      EventDao.listAllEventsWithAuthorNames.map {
+        case multiple: Seq[T] =>
+          new Response[T](true, multiple = Some(multiple))
+        case _ => new Response[T](false)
+      }.recover {
+        case cause => new Response[T](false, message = Some(cause.toString))
+      }.map { case r => r.toJson.compactPrint } pipeTo sender
 
     case Create(e: Event) =>
       makeResponse(EventDao.addEvent(e)) pipeTo sender
