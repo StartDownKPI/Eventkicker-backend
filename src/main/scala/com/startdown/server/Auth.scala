@@ -32,3 +32,5 @@ trait Authenticator {
     BasicAuth(authenticator _, realm = "Private API")
   }
 }
+
+object Authenticator extends Authenticator

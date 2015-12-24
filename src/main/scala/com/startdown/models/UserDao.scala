@@ -57,7 +57,6 @@ object UserDao extends PostgresSupport {
   def addUser(u: User) =
     db.run(users += BCryptHelper.user(u))
 
-  @Deprecated
   def findUser(username: String) = {
     db.run(users.filter(_.username === username).result
         map {

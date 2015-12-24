@@ -4,8 +4,9 @@ import akka.actor.{Actor, Props}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.startdown.models.{User, UserDao}
-import com.startdown.server.WebService
+import com.startdown.server.{WebService, Authenticator, AuthInfo}
 import com.startdown.utils.{CRUD, Response, Responsive}
+import spray.http.StatusCodes
 import spray.json._
 
 import scala.concurrent.duration._
@@ -17,6 +18,7 @@ import scala.concurrent.duration._
 trait UserService extends WebService {
 
   import com.startdown.models.UserJsonProtocol._
+  import com.startdown.server.Authenticator._
   import spray.httpx.SprayJsonSupport._
 
   val postgresUserWorker = actorRefFactory.actorOf(Props[PostgresUserActor],
@@ -27,6 +29,15 @@ trait UserService extends WebService {
 
   val userServiceRoutes = {
     import PostgresUserActor._
+    pathPrefix("login") {
+      pathEndOrSingleSlash {
+        authenticate(basicUserAuthenticator) { authInfo =>
+          get {
+            complete(StatusCodes.OK)
+          }
+        }
+      }
+    } ~
     pathPrefix("users") {
       pathEndOrSingleSlash {
         get {
@@ -78,15 +89,15 @@ trait UserService extends WebService {
                       postgresUserCall(Delete(userId))
                     }
                   }
-            }  ~
+            } ~
                 pathPrefix("events") {
-                    pathEndOrSingleSlash {
-                      get {
-                        complete {
-                          postgresUserCall(GetEvents(userId))
-                        }
+                  pathEndOrSingleSlash {
+                    get {
+                      complete {
+                        postgresUserCall(GetEvents(userId))
                       }
                     }
+                  }
                 }
           }
     }
