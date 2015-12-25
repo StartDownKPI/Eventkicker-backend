@@ -32,8 +32,10 @@ trait UserService extends WebService {
     pathPrefix("login") {
       pathEndOrSingleSlash {
         authenticate(basicUserAuthenticator) { authInfo =>
-          get {
-            complete(StatusCodes.OK)
+          post {
+            complete {
+              authInfo.user.toJson.compactPrint
+            }
           }
         }
       }
