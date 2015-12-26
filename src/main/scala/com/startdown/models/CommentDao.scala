@@ -1,10 +1,11 @@
 package com.startdown.models
 
 import com.github.tototoshi.slick.PostgresJodaSupport._
+import com.startdown.models.EventDao._
+import com.startdown.models.UserDao._
 import com.startdown.utils.{CustomPostgresDriver, PostgresSupport}
 import org.joda.time.DateTime
 import spray.json._
-import EventDao._
 
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
@@ -16,9 +17,17 @@ case class Comment(id: Option[Long],
                    authorId: Option[Long],
                    eventId: Option[Long])
 
+case class CommentWithAuthorName(id: Option[Long],
+                                 timeCreated: Option[DateTime],
+                                 content: Option[String],
+                                 authorId: Option[Long],
+                                 authorName: Option[String],
+                                 eventId: Option[Long])
+
 object CommentJsonProtocol extends DefaultJsonProtocol {
   import com.startdown.utils.JodaTimeJsonProtocol._
   implicit val commentFormat = jsonFormat5(Comment)
+  implicit val commentWithAuthorNameFormat = jsonFormat6(CommentWithAuthorName)
 }
 
 object CommentDao extends PostgresSupport {
@@ -93,14 +102,21 @@ object CommentDao extends PostgresSupport {
   def getForEvent(eventId: Long, limit: Long) =
     db.run {
       val joined = for {
+        (c, u) <- comments join users on (_.authorId === _.id)
         (c, e) <- comments join events on (_.eventId === _.id)
-      } yield (c, e.id)
+      } yield (c, e.id, u.name)
       val j =
         if (limit > 0) joined.sortBy(_._1.timeCreated.desc)
         else joined
       val filtered = j.result.map(r => r.filter(t => t._2 == eventId)
-          .map(_._1))
-      if (limit > 0) filtered.map{ r => r.take(limit.asInstanceOf[Int]) }
-      else filtered
+          .map {
+            case (c, _, authorName) => CommentWithAuthorName(
+            c.id, c.timeCreated, c.content, c.authorId, authorName, c.eventId)
+          })
+      val result =
+        if (limit > 0) filtered.map{ r => r.take(limit.asInstanceOf[Int]) }
+        else filtered
+
+      result
     }
 }

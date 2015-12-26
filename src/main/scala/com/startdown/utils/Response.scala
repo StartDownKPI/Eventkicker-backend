@@ -1,5 +1,6 @@
 package com.startdown.utils
 
+import com.startdown.models.CommentWithAuthorName
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -24,3 +25,5 @@ trait Responsive[T] {
         .toString))
     }.map { case r => r.toJson.compactPrint }
 }
+
+object ResponsiveComment extends Responsive[CommentWithAuthorName]

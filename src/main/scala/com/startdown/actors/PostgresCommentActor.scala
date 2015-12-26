@@ -2,9 +2,9 @@ package com.startdown.actors
 
 import akka.actor.{Props, Actor}
 import akka.pattern.{ask, pipe}
-import com.startdown.models.{Comment, CommentDao}
+import com.startdown.models.{CommentWithAuthorName, Comment, CommentDao}
 import com.startdown.server.WebService
-import com.startdown.utils.{CRUD, Response, Responsive}
+import com.startdown.utils.{ResponsiveComment, CRUD, Response, Responsive}
 import spray.json._
 
 /**
@@ -90,6 +90,8 @@ class PostgresCommentActor extends Actor with Responsive[Comment] {
   import context.dispatcher
 
   implicit val responseFormat = jsonFormat4(Response[Comment])
+  implicit val responseWithAuthorNameFormat =
+    jsonFormat4(Response[CommentWithAuthorName])
 
   override def receive = {
     case FetchAll =>
@@ -117,9 +119,11 @@ class PostgresCommentActor extends Actor with Responsive[Comment] {
       makeResponse(CommentDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
 
     case GetForEvent(eventId: Long) =>
-      makeResponse(CommentDao.getForEvent(eventId, 0)) pipeTo sender
+      ResponsiveComment
+          .makeResponse(CommentDao.getForEvent(eventId, 0)) pipeTo sender
 
     case GetPreviewForEvent(eventId: Long, limit: Long) =>
-      makeResponse(CommentDao.getForEvent(eventId, limit)) pipeTo sender
+      ResponsiveComment
+          .makeResponse(CommentDao.getForEvent(eventId, limit)) pipeTo sender
   }
 }
