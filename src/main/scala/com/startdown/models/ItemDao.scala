@@ -87,8 +87,8 @@ object ItemDao extends PostgresSupport {
   def getForEvent(eventId: Long) =
     db.run {
       val joined = for {
-        (e, u) <- items join events on (_.eventId === _.id)
-      } yield (e, u.id)
+        (i, e) <- items join events on (_.eventId === _.id)
+      } yield (i, e.id)
       joined.result.map(r => r.filter(t => t._2 == eventId).map(_._1))
     }
 }

@@ -78,7 +78,10 @@ trait CommentService extends WebService {
 }
 
 
-object PostgresCommentActor extends CRUD[Comment, Long]
+object PostgresCommentActor extends CRUD[Comment, Long] {
+  case class GetForEvent(eventId: Long)
+  case class GetPreviewForEvent(eventId: Long, limit: Long)
+}
 
 class PostgresCommentActor extends Actor with Responsive[Comment] {
 
@@ -112,5 +115,11 @@ class PostgresCommentActor extends Actor with Responsive[Comment] {
 
     case DropTable =>
       makeResponse(CommentDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
+
+    case GetForEvent(eventId: Long) =>
+      makeResponse(CommentDao.getForEvent(eventId, 0)) pipeTo sender
+
+    case GetPreviewForEvent(eventId: Long, limit: Long) =>
+      makeResponse(CommentDao.getForEvent(eventId, limit)) pipeTo sender
   }
 }

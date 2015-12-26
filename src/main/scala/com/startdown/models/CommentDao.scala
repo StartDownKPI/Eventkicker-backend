@@ -4,6 +4,7 @@ import com.github.tototoshi.slick.PostgresJodaSupport._
 import com.startdown.utils.{CustomPostgresDriver, PostgresSupport}
 import org.joda.time.DateTime
 import spray.json._
+import EventDao._
 
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
@@ -88,4 +89,18 @@ object CommentDao extends PostgresSupport {
 
   def deleteAll =
     db.run(comments.delete)
+
+  def getForEvent(eventId: Long, limit: Long) =
+    db.run {
+      val joined = for {
+        (c, e) <- comments join events on (_.eventId === _.id)
+      } yield (c, e.id)
+      val j =
+        if (limit > 0) joined.sortBy(_._1.timeCreated.desc)
+        else joined
+      val filtered = j.result.map(r => r.filter(t => t._2 == eventId)
+          .map(_._1))
+      if (limit > 0) filtered.map{ r => r.take(limit.asInstanceOf[Int]) }
+      else filtered
+    }
 }

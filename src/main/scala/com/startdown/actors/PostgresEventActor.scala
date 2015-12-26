@@ -113,6 +113,25 @@ trait EventService extends WebService {
                       }
                     }
                   }
+                } ~
+                pathPrefix("comments") {
+                  pathEndOrSingleSlash {
+                    get {
+                      complete {
+                        postgresEventCall(GetComments(eventId))
+                      }
+                    }
+                  } ~
+                      pathPrefix("preview" / LongNumber) { limit =>
+                        pathEndOrSingleSlash {
+                          get {
+                            complete {
+                              postgresEventCall(GetCommentsPreview(eventId,
+                                limit))
+                            }
+                          }
+                        }
+                      }
                 }
           }
     }
@@ -124,6 +143,8 @@ object PostgresEventActor extends CRUD[Event, Long] {
   case class Search(keywords: List[String])
   case class GetForUser(userId: Long)
   case class GetItems(id: Long)
+  case class GetComments(id: Long)
+  case class GetCommentsPreview(id: Long, limit: Long)
   case class GetAuthor(id: Long)
 }
 
@@ -135,6 +156,7 @@ class PostgresEventActor extends Actor with Responsive[Event] {
   implicit val responseFormat = jsonFormat4(Response[Event])
   implicit val response1Format = jsonFormat4(Response[EventWithAuthorName])
 
+  implicit val timeout = Timeout(120.seconds)
   override def receive = {
     case FetchAll =>
       makeResponse(EventDao.listAllEvents) pipeTo sender
@@ -171,7 +193,6 @@ class PostgresEventActor extends Actor with Responsive[Event] {
       makeResponse(EventDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
 
     case Search(keywords: List[String]) =>
-      implicit val timeout = Timeout(120.seconds)
       makeResponse(EventDao.searchEvents(keywords).map {
         seq => if (seq.nonEmpty) seq else None
       }) pipeTo sender
@@ -180,12 +201,18 @@ class PostgresEventActor extends Actor with Responsive[Event] {
       makeResponse(EventDao.getForUser(userId)) pipeTo sender
 
     case GetItems(eventId: Long) =>
-      implicit val timeout = Timeout(120.seconds)
       context.actorSelection("../postgres-item-worker") ? PostgresItemActor
-          .GetForEvent(eventId)
+          .GetForEvent(eventId) pipeTo sender
+
+    case GetComments(eventId: Long) =>
+      context.actorSelection("../postgres-comment-worker") ? PostgresCommentActor
+          .GetForEvent(eventId) pipeTo sender
+
+    case GetCommentsPreview(eventId: Long, limit: Long) =>
+      context.actorSelection("../postgres-comment-worker") ? PostgresCommentActor
+          .GetPreviewForEvent(eventId, limit) pipeTo sender
 
     case GetAuthor(eventId: Long) =>
-      implicit val timeout = Timeout(120.seconds)
       def getAuthor0(authorId: Long) =
         context.actorSelection("../postgres-user-worker") ? PostgresUserActor
             .Read(authorId)
