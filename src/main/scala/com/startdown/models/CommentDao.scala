@@ -102,16 +102,17 @@ object CommentDao extends PostgresSupport {
   def getForEvent(eventId: Long, limit: Long) =
     db.run {
       val joined = for {
-        (c, u) <- comments join users on (_.authorId === _.id)
-        (c, e) <- comments join events on (_.eventId === _.id)
+        ((c, u), e) <- comments join users on (_.authorId === _.id) join
+            events on (_._1.eventId === _.id)
       } yield (c, e.id, u.name)
       val j =
         if (limit > 0) joined.sortBy(_._1.timeCreated.desc)
         else joined
       val filtered = j.result.map(r => r.filter(t => t._2 == eventId)
           .map {
-            case (c, _, authorName) => CommentWithAuthorName(
-            c.id, c.timeCreated, c.content, c.authorId, authorName, c.eventId)
+            case (c, _, authorName) =>
+              CommentWithAuthorName(c.id, c.timeCreated, c.content, c.authorId,
+                authorName, c.eventId)
           })
       val result =
         if (limit > 0) filtered.map{ r => r.take(limit.asInstanceOf[Int]) }
