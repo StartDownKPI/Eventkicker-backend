@@ -16,6 +16,7 @@ import scala.concurrent.duration._
   */
 trait EventService extends WebService {
   import com.startdown.models.EventJsonProtocol._
+  import com.startdown.server.Authenticator._
   import spray.httpx.SprayJsonSupport._
 
   val postgresEventWorker = actorRefFactory.actorOf(Props[PostgresEventActor],
@@ -132,6 +133,29 @@ trait EventService extends WebService {
                           }
                         }
                       }
+                } ~
+                pathPrefix("likes") {
+                  pathPrefix("done") {
+                    pathEndOrSingleSlash {
+                      authenticate(basicUserAuthenticator) { authInfo =>
+                        get {
+                          complete {
+                            postgresEventCall(
+                              IsLiked(eventId, authInfo.user.id.get))
+                          }
+                        }
+                      }
+                    }
+                  } ~
+                      pathPrefix("count") {
+                        pathEndOrSingleSlash {
+                          get {
+                            complete {
+                              postgresEventCall(GetLikesCount(eventId))
+                            }
+                          }
+                        }
+                      }
                 }
           }
     }
@@ -146,6 +170,8 @@ object PostgresEventActor extends CRUD[Event, Long] {
   case class GetComments(id: Long)
   case class GetCommentsPreview(id: Long, limit: Long)
   case class GetAuthor(id: Long)
+  case class IsLiked(eventId: Long, authorId: Long)
+  case class GetLikesCount(eventId: Long)
 }
 
 class PostgresEventActor extends Actor with Responsive[Event] {
@@ -222,5 +248,13 @@ class PostgresEventActor extends Actor with Responsive[Event] {
       } recoverWith {
         case t: Throwable => makeResponse(Future { t })
       } pipeTo sender
+
+    case IsLiked(eventId: Long, authorId: Long) =>
+      context.actorSelection("../postgres-like-worker") ? PostgresLikeActor
+          .FindForEvent(eventId, authorId) pipeTo sender
+
+    case GetLikesCount(eventId: Long) =>
+      context.actorSelection("../postgres-like-worker") ? PostgresLikeActor
+          .CountForEvent(eventId) pipeTo sender
   }
 }

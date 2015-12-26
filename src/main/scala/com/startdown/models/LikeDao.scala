@@ -4,6 +4,8 @@ import com.startdown.utils.PostgresSupport
 import slick.driver.PostgresDriver.api._
 import slick.lifted.Tag
 import spray.json.DefaultJsonProtocol
+import EventDao._
+import UserDao._
 
 /**
   * infm created it with love on 12/16/15. Enjoy ;)
@@ -66,4 +68,30 @@ object LikeDao extends PostgresSupport {
 
   def deleteAll =
     db.run(likes.delete)
+
+  def findForEvent(eventId: Long, authorId: Long) =
+    db.run {
+      val joined = for {
+        (l, e) <- likes join events on (_.eventId === _.id)
+        (l, u) <- likes join users on (_.authorId === _.id)
+      } yield (l, e.id, u.id)
+      joined.result.map {
+        r => r.filter(t => t._2 == eventId && t._3 == authorId)
+      } map {
+        case Seq(x, _*) => Some(true)
+        case _ => Some(false)
+      }
+    }
+
+  def countForEvent(eventId: Long) =
+    db.run {
+      val joined = for {
+        (l, e) <- likes join events on (_.eventId === _.id)
+      } yield (l, e.id)
+      joined.result.map {
+        r => r.filter(t => t._2 == eventId)
+      } map {
+        r => Some(r.size)
+      }
+    }
 }

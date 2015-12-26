@@ -27,3 +27,5 @@ trait Responsive[T] {
 }
 
 object ResponsiveComment extends Responsive[CommentWithAuthorName]
+object ResponsiveInt extends Responsive[Int]
+object ResponsiveBoolean extends Responsive[Boolean]

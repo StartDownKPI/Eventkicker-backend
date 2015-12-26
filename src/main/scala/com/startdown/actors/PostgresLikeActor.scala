@@ -4,7 +4,7 @@ import akka.actor.{Props, Actor}
 import akka.pattern.{ask, pipe}
 import com.startdown.models.{Like, LikeDao}
 import com.startdown.server.WebService
-import com.startdown.utils.{CRUD, Response, Responsive}
+import com.startdown.utils._
 import spray.json._
 
 /**
@@ -78,7 +78,10 @@ trait LikeService extends WebService {
   }
 }
 
-object PostgresLikeActor extends CRUD[Like, Long]
+object PostgresLikeActor extends CRUD[Like, Long] {
+  case class FindForEvent(eventId: Long, authorId: Long)
+  case class CountForEvent(eventId: Long)
+}
 
 class PostgresLikeActor extends Actor with Responsive[Like] {
 
@@ -87,6 +90,8 @@ class PostgresLikeActor extends Actor with Responsive[Like] {
   import context.dispatcher
 
   implicit val responseFormat = jsonFormat4(Response[Like])
+  implicit val responseIntFormat = jsonFormat4(Response[Int])
+  implicit val responseBoolFormat = jsonFormat4(Response[Boolean])
 
   override def receive = {
     case FetchAll =>
@@ -113,5 +118,13 @@ class PostgresLikeActor extends Actor with Responsive[Like] {
 
     case DropTable =>
       makeResponse(LikeDao.dropTable.map(_.toJson.compactPrint)) pipeTo sender
+
+    case FindForEvent(eventId: Long, authorId: Long) =>
+      ResponsiveBoolean.
+          makeResponse(LikeDao.findForEvent(eventId, authorId)) pipeTo sender
+
+    case CountForEvent(eventId: Long) =>
+      ResponsiveInt.
+          makeResponse(LikeDao.countForEvent(eventId)) pipeTo sender
   }
 }
